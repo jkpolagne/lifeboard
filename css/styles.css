@@ -94,12 +94,10 @@ input, textarea {
 /* ── Filter Bar ── */
 .filter-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 8px 20px 12px;
-  overflow-x: auto;
   flex-shrink: 0;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
 
 .filter-bar::-webkit-scrollbar {
@@ -620,14 +618,19 @@ input, textarea {
 
 /* ── MOBILE (<768px) ── */
 @media (max-width: 767px) {
-  .screen {
+  #sidebar {
     display: none;
     width: 100%;
   }
 
-  .screen.active {
+  #sidebar.active {
     display: flex;
     flex-direction: column;
+  }
+
+  #detail-panel {
+    display: none;
+    width: 100%;
   }
 
   #detail-panel.active {
