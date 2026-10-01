@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LifeBoard — Journal</title>
+  <title>LifeBoard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,13 +11,34 @@
 </head>
 <body>
   <div id="app">
-    <!-- MOBILE HOME / DESKTOP SIDEBAR -->
+    <!-- Desktop nav rail -->
+    <nav id="nav-rail">
+      <div class="nav-rail-top">
+        <div class="nav-rail-brand">LB</div>
+        <button class="nav-rail-item active" data-feature="journal" data-tooltip="Journal">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </button>
+        <button class="nav-rail-item" data-feature="todo" data-tooltip="Todo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </button>
+      </div>
+      <div class="nav-rail-bottom">
+        <button class="nav-rail-item" id="btn-theme-rail" data-tooltip="Theme">
+          <span class="theme-icon">☀️</span>
+        </button>
+      </div>
+    </nav>
+
     <aside id="sidebar" class="screen active">
-      <header class="sidebar-header">
-        <h1 class="logo">LifeBoard</h1>
+
+      <!-- Journal header -->
+      <header id="journal-header" class="sidebar-header">
+        <div class="title-group">
+          <h1 class="logo">LifeBoard</h1>
+          <p class="subtitle">My Journal</p>
+        </div>
         <div class="header-actions">
           <div id="streak" class="streak">🔥 0-day streak</div>
-          <button id="btn-theme" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">☀️</button>
           <div class="menu-wrapper">
             <button id="btn-menu" class="icon-btn" aria-label="Settings menu" title="Settings">⚙️</button>
             <div id="settings-dropdown" class="dropdown hidden">
@@ -30,82 +51,126 @@
         </div>
       </header>
 
-      <div class="filter-bar">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="pinned">⭐ Pinned</button>
-        <button class="filter-btn" data-filter="😊">😊</button>
-        <button class="filter-btn" data-filter="😢">😢</button>
-        <button class="filter-btn" data-filter="😡">😡</button>
-        <button class="filter-btn" data-filter="🤩">🤩</button>
-        <button class="filter-btn" data-filter="😌">😌</button>
-        <button class="filter-btn" data-filter="💪">💪</button>
-        <button class="filter-btn" data-filter="⭐">⭐</button>
-        <button class="filter-btn" data-filter="😔">😔</button>
-      </div>
-
-      <div class="search-wrapper">
-        <input type="text" id="search-input" class="search-input" placeholder="Search your entries...">
-        <button id="search-clear" class="search-clear hidden" aria-label="Clear search">✕</button>
-      </div>
-
-      <div class="view-toggle">
-        <button class="view-toggle-btn active" data-view="list">☰ List</button>
-        <button class="view-toggle-btn" data-view="calendar">📅 Calendar</button>
-      </div>
-
-      <div id="calendar-view" class="calendar-view hidden">
-        <div class="calendar-header">
-          <button id="cal-prev" class="cal-nav" aria-label="Previous month">‹</button>
-          <span id="cal-month-year" class="cal-month-year"></span>
-          <button id="cal-next" class="cal-nav" aria-label="Next month">›</button>
+      <!-- Todo header (mobile) -->
+      <header id="todo-header" class="sidebar-header hidden">
+        <div class="title-group">
+          <h1 class="logo">Todo</h1>
+          <p class="subtitle">Stay on track</p>
         </div>
-        <div class="calendar-grid">
-          <div class="cal-day-label">Su</div>
-          <div class="cal-day-label">Mo</div>
-          <div class="cal-day-label">Tu</div>
-          <div class="cal-day-label">We</div>
-          <div class="cal-day-label">Th</div>
-          <div class="cal-day-label">Fr</div>
-          <div class="cal-day-label">Sa</div>
-          <div id="cal-days" class="cal-days-container"></div>
+        <div class="header-actions">
+          <button id="btn-clear-header" class="btn btn-clear-header hidden">Clear completed</button>
+        </div>
+      </header>
+
+      <!-- JOURNAL SIDEBAR -->
+      <div id="journal-sidebar" class="feature-sidebar">
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="pinned">⭐ Pinned</button>
+          <button class="filter-btn" data-filter="😊">😊</button>
+          <button class="filter-btn" data-filter="😢">😢</button>
+          <button class="filter-btn" data-filter="😡">😡</button>
+          <button class="filter-btn" data-filter="🤩">🤩</button>
+          <button class="filter-btn" data-filter="😌">😌</button>
+          <button class="filter-btn" data-filter="💪">💪</button>
+          <button class="filter-btn" data-filter="⭐">⭐</button>
+          <button class="filter-btn" data-filter="😔">😔</button>
+        </div>
+
+        <div class="search-wrapper">
+          <input type="text" id="search-input" class="search-input" placeholder="Search your entries...">
+          <button id="search-clear" class="search-clear hidden" aria-label="Clear search">✕</button>
+        </div>
+
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" data-view="list">☰ List</button>
+          <button class="view-toggle-btn" data-view="calendar">📅 Calendar</button>
+        </div>
+
+        <div id="calendar-view" class="calendar-view hidden">
+          <div class="calendar-header">
+            <button id="cal-prev" class="cal-nav" aria-label="Previous month">‹</button>
+            <span id="cal-month-year" class="cal-month-year"></span>
+            <button id="cal-next" class="cal-nav" aria-label="Next month">›</button>
+          </div>
+          <div class="calendar-grid">
+            <div class="cal-day-label">Su</div><div class="cal-day-label">Mo</div><div class="cal-day-label">Tu</div><div class="cal-day-label">We</div><div class="cal-day-label">Th</div><div class="cal-day-label">Fr</div><div class="cal-day-label">Sa</div>
+            <div id="cal-days" class="cal-days-container"></div>
+          </div>
+        </div>
+
+        <div id="entries-list" class="entries-list"></div>
+
+        <div class="new-entry-bar">
+          <button id="btn-new-entry" class="btn btn-primary btn-new-entry">+ New Entry</button>
         </div>
       </div>
 
-      <div id="entries-list" class="entries-list"></div>
+      <!-- TODO SIDEBAR -->
+      <div id="todo-sidebar" class="feature-sidebar hidden">
+        <div class="todo-progress">
+          <div class="progress-row">
+            <span id="todo-progress-text" class="progress-text">0 of 0 tasks completed</span>
+            <span id="todo-progress-pct" class="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="todo-progress-fill" class="progress-bar-fill" style="width:0%"></div>
+          </div>
+        </div>
 
-      <button id="fab" class="fab" aria-label="New entry">+</button>
+        <div class="todo-quick-add">
+          <input type="text" id="todo-quick-input" class="search-input" placeholder="Add a task...press Enter">
+          <button id="todo-expand-btn" class="todo-fab-btn" title="Add with details" aria-label="Add with details">+</button>
+        </div>
+
+        <div class="todo-toolbar">
+          <button class="todo-chip active" data-tfilter="status" data-value="all">All</button>
+          <button class="todo-chip" data-tfilter="status" data-value="active">Active</button>
+          <button class="todo-chip" data-tfilter="status" data-value="completed">Completed</button>
+          <span id="todo-category-filters"></span>
+        </div>
+
+        <div id="todo-list" class="entries-list"></div>
+
+        <div id="todo-clear-wrap" class="todo-clear-wrap hidden">
+          <button id="btn-clear-completed" class="btn-clear-link">Clear completed</button>
+        </div>
+      </div>
     </aside>
 
-    <!-- DETAIL PANEL (desktop right side / mobile full screen) -->
+    <!-- DETAIL PANEL -->
     <main id="detail-panel" class="screen">
-      <div id="detail-empty" class="detail-empty">
-        <p>Select an entry or start writing</p>
-      </div>
+      <div id="detail-empty" class="detail-empty"><p>Select an entry or start writing</p></div>
+      <div id="todo-detail-empty" class="detail-empty hidden"><p>Select a task or create one</p></div>
 
-      <!-- VIEW ENTRY -->
+      <!-- Journal: View -->
       <div id="view-entry" class="detail-view hidden">
         <button class="back-btn" data-target="home">← Back</button>
         <div class="view-header">
-          <span id="view-mood" class="mood-badge"></span>
-          <time id="view-date"></time>
-          <button id="view-pin" class="pin-btn" aria-label="Pin entry">☆</button>
+          <div class="view-mood-row">
+            <span id="view-mood" class="mood-badge"></span>
+            <span id="view-mood-label" class="mood-label"></span>
+          </div>
+          <div class="view-header-actions">
+            <button id="view-pin" class="pin-btn" aria-label="Pin entry">☆</button>
+            <button id="btn-edit" class="btn btn-edit-green">✏️ Edit</button>
+            <button id="btn-delete" class="btn btn-delete-icon" aria-label="Delete entry">🗑️</button>
+          </div>
         </div>
+        <time id="view-date" class="view-date"></time>
         <h2 id="view-title" class="view-title"></h2>
         <div id="view-text" class="view-text"></div>
-        <div class="view-actions">
-          <button id="btn-edit" class="btn btn-secondary">Edit</button>
-          <button id="btn-delete" class="btn btn-danger">Delete</button>
-        </div>
       </div>
 
-      <!-- WRITE / EDIT ENTRY -->
+      <!-- Journal: Write/Edit -->
       <div id="write-entry" class="detail-view hidden">
         <button class="back-btn" data-target="home">← Back</button>
-        <h2 class="write-heading" id="write-heading">New Entry</h2>
-
+        <div class="write-top-row">
+          <h2 class="write-heading" id="write-heading">New Entry</h2>
+          <button id="btn-save" class="btn btn-primary btn-save-top">Save Entry</button>
+        </div>
         <label for="entry-title" class="field-label">Title <span class="optional">(optional)</span></label>
-        <input type="text" id="entry-title" class="input" placeholder="Give this entry a title…">
-
+        <input type="text" id="entry-title" class="input" placeholder="Give this entry a headline...">
         <label class="field-label">How are you feeling? <span class="required">*</span></label>
         <div id="mood-grid" class="mood-grid">
           <button class="mood-option" data-mood="😊">😊<span>Happy</span></button>
@@ -118,25 +183,73 @@
           <button class="mood-option" data-mood="😔">😔<span>Bad Day</span></button>
         </div>
         <p id="mood-error" class="error-msg hidden">Please select a mood</p>
-
         <div class="prompt-section">
           <button id="btn-prompt" class="btn btn-prompt">✨ Give me a prompt</button>
           <p id="prompt-text" class="prompt-text hidden"></p>
         </div>
-
-        <label for="entry-text" class="field-label">Write your thoughts…</label>
-        <textarea id="entry-text" class="textarea" placeholder="What's on your mind?"></textarea>
+        <label for="entry-text" class="field-label">Your entry</label>
+        <textarea id="entry-text" class="textarea" placeholder="Write what's on your mind..."></textarea>
         <div id="word-count" class="word-count">0 words</div>
+        <button id="btn-save-mobile" class="btn btn-primary btn-save">Save Entry</button>
+      </div>
 
-        <button id="btn-save" class="btn btn-primary btn-save">Save Entry</button>
+      <!-- Todo: Edit -->
+      <div id="todo-edit-view" class="detail-view hidden">
+        <button class="back-btn" data-target="todo-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="todo-form-heading">New Task</h2>
+          <div class="todo-top-actions">
+            <button id="btn-todo-save" class="btn btn-primary btn-save-top">Save</button>
+            <button id="btn-todo-delete-top" class="btn btn-delete-icon hidden" aria-label="Delete task">🗑️</button>
+          </div>
+        </div>
+        <label for="todo-name" class="field-label">Task name <span class="required">*</span></label>
+        <input type="text" id="todo-name" class="input" placeholder="What do you need to do?">
+        <p id="todo-name-error" class="error-msg hidden">Task name is required</p>
+        <label for="todo-note" class="field-label">Note <span class="optional">(optional)</span></label>
+        <textarea id="todo-note" class="textarea todo-note-area" placeholder="Add extra details or context..."></textarea>
+        <label class="field-label">Priority</label>
+        <div class="priority-picker">
+          <button class="priority-btn" data-priority="high"><span class="pri-dot" style="background:#C45B4A"></span>High</button>
+          <button class="priority-btn selected" data-priority="medium"><span class="pri-dot" style="background:#D4943A"></span>Medium</button>
+          <button class="priority-btn" data-priority="low"><span class="pri-dot" style="background:#7A7068"></span>Low</button>
+        </div>
+        <label for="todo-due" class="field-label">Due date <span class="optional">(optional)</span></label>
+        <input type="date" id="todo-due" class="input">
+        <label class="field-label">Category</label>
+        <div id="todo-category-picker" class="category-picker"></div>
+        <div class="category-custom-row">
+          <input type="text" id="custom-cat-name" class="input custom-cat-input" placeholder="New category name">
+          <input type="color" id="custom-cat-color" class="color-picker" value="#5B8C6A">
+          <button id="btn-add-cat" class="btn btn-secondary btn-sm">Add</button>
+        </div>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-todo-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-todo-save-bottom" class="btn btn-primary">Save Task</button>
+        </div>
       </div>
     </main>
   </div>
 
-  <!-- DELETE CONFIRMATION MODAL -->
+  <!-- BOTTOM NAV (mobile) -->
+  <nav id="bottom-nav" class="bottom-nav">
+    <button class="bottom-nav-item active" data-feature="journal">
+      <span class="nav-icon">📖</span>
+      <span class="nav-label">Journal</span>
+    </button>
+    <button class="bottom-nav-item" data-feature="todo">
+      <span class="nav-icon">☑️</span>
+      <span class="nav-label">Todo</span>
+    </button>
+  </nav>
+
+  <!-- FAB (mobile new entry) -->
+  <button id="fab-new-entry" class="fab">+</button>
+
+  <!-- MODAL -->
   <div id="delete-modal" class="modal-overlay hidden">
     <div class="modal">
-      <p id="modal-text" class="modal-text">Are you sure you want to delete this entry?</p>
+      <p id="modal-text" class="modal-text">Are you sure?</p>
       <div class="modal-actions">
         <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
         <button id="modal-confirm" class="btn btn-danger">Delete</button>
@@ -144,12 +257,8 @@
     </div>
   </div>
 
-  <!-- IMPORT RESULT TOAST -->
   <div id="toast" class="toast hidden"></div>
-
-  <!-- Hidden file input for import -->
   <input type="file" id="import-file" accept=".json" class="hidden">
-
   <script src="js/app.js"></script>
 </body>
 </html>
