@@ -24,6 +24,9 @@
         <button class="nav-rail-item" data-feature="todo" data-tooltip="Todo">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         </button>
+        <button class="nav-rail-item" data-feature="goals" data-tooltip="Goals">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </button>
       </div>
       <div class="nav-rail-bottom">
         <button class="nav-rail-item" id="btn-theme-rail" data-tooltip="Theme">
@@ -168,12 +171,42 @@
           <button id="btn-clear-completed" class="btn-clear-link">Clear completed</button>
         </div>
       </div>
+
+      <!-- Goals header (mobile) -->
+      <header id="goals-header" class="sidebar-header hidden">
+        <div class="title-group">
+          <h1 class="logo">Goals</h1>
+          <p class="subtitle" id="goals-subtitle">Track your progress</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-new-goal-header" class="todo-fab-btn" title="Add new goal" aria-label="Add new goal">+</button>
+        </div>
+      </header>
+
+      <!-- GOALS SIDEBAR -->
+      <div id="goals-sidebar" class="feature-sidebar hidden">
+        <div class="goal-summary-row">
+          <span id="goals-summary-text" class="progress-text">No goals yet</span>
+          <button id="btn-new-goal" class="todo-fab-btn" title="Add new goal" aria-label="Add new goal">+</button>
+        </div>
+
+        <div class="todo-toolbar goal-toolbar">
+          <button class="todo-chip active" data-gfilter="status" data-value="all">All</button>
+          <button class="todo-chip" data-gfilter="status" data-value="active">Active</button>
+          <button class="todo-chip" data-gfilter="status" data-value="completed">Done</button>
+          <button class="todo-chip" data-gfilter="status" data-value="paused">Paused</button>
+          <span id="goal-category-filters"></span>
+        </div>
+
+        <div id="goals-list" class="entries-list"></div>
+      </div>
     </aside>
 
     <!-- DETAIL PANEL -->
     <main id="detail-panel" class="screen">
       <div id="detail-empty" class="detail-empty hidden"><p>Select an entry or start writing</p></div>
       <div id="todo-detail-empty" class="detail-empty hidden"><p>Select a task or create one</p></div>
+      <div id="goals-detail-empty" class="detail-empty hidden"><p>Select a goal or create one</p></div>
 
       <!-- Today: Dashboard -->
       <div id="today-dashboard" class="detail-view today-dashboard">
@@ -194,12 +227,28 @@
           </div>
         </div>
 
+        <div id="today-dashboard-habits" class="today-section today-dashboard-habits">
+          <div class="today-section-header">
+            <h3 class="today-section-title">Today's Habits</h3>
+            <button id="btn-manage-habits-dash" class="today-manage-link">Manage</button>
+          </div>
+          <div id="today-dashboard-habits-list" class="today-habits-list"></div>
+        </div>
+
         <div class="today-section">
           <div class="today-section-header">
             <h3 class="today-section-title">Reminders</h3>
             <button id="btn-add-sticky" class="today-add-btn" title="Add reminder">+</button>
           </div>
           <div id="today-reminders" class="today-reminders"></div>
+        </div>
+
+        <div class="today-section">
+          <div class="today-section-header">
+            <h3 class="today-section-title">Goals</h3>
+            <button id="btn-view-all-goals" class="today-manage-link">View all</button>
+          </div>
+          <div id="today-goals-overview" class="today-goals-overview"></div>
         </div>
 
         <div class="today-section">
@@ -283,6 +332,106 @@
         <div class="todo-form-actions-bottom">
           <button id="btn-sticky-cancel" class="btn btn-secondary">Cancel</button>
           <button id="btn-sticky-save-bottom" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+
+      <!-- Goals: Detail -->
+      <div id="goal-detail-view" class="detail-view hidden">
+        <button class="back-btn" data-target="goals-home">← Back</button>
+        <div class="goal-detail-header">
+          <div class="goal-detail-main">
+            <span class="goal-detail-emoji" id="goal-detail-emoji">🎯</span>
+            <h2 class="goal-detail-title" id="goal-detail-title"></h2>
+          </div>
+          <div class="goal-detail-actions">
+            <button id="btn-goal-edit" class="btn btn-edit-green">✏️ Edit</button>
+            <button id="btn-goal-delete" class="btn btn-delete-icon" aria-label="Delete goal">🗑️</button>
+          </div>
+        </div>
+        <div class="goal-detail-meta">
+          <span class="goal-status-badge active" id="goal-detail-status">Active</span>
+          <span class="task-category-tag"><span class="cat-dot" id="goal-detail-cat-dot"></span><span id="goal-detail-cat-name"></span></span>
+          <span class="goal-detail-deadline" id="goal-detail-deadline"></span>
+        </div>
+        <div class="goal-detail-desc" id="goal-detail-desc"></div>
+        <div class="goal-detail-progress">
+          <div class="progress-row">
+            <span class="progress-text" id="goal-detail-progress-text">Progress</span>
+            <span class="progress-pct" id="goal-detail-progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track goal-progress-track">
+            <div class="progress-bar-fill" id="goal-detail-progress-fill" style="width:0%"></div>
+          </div>
+          <span class="goal-detail-milestone-count" id="goal-detail-milestone-count"></span>
+        </div>
+        <div id="goal-detail-milestones" class="goal-detail-milestones hidden">
+          <h3 class="today-section-title">Milestones</h3>
+          <div id="goal-milestone-list" class="goal-milestone-list"></div>
+        </div>
+        <div class="goal-detail-bottom-actions">
+          <button id="btn-goal-edit-bottom" class="btn btn-primary">✏️ Edit Goal</button>
+          <button id="btn-goal-delete-bottom" class="btn btn-delete-icon" aria-label="Delete goal">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Goals: Form -->
+      <div id="goal-form-view" class="detail-view hidden">
+        <button class="back-btn" data-target="goals-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="goal-form-heading">New Goal</h2>
+          <div class="todo-top-actions">
+            <button id="btn-goal-save-top" class="btn btn-primary btn-save-top">Save</button>
+            <button id="btn-goal-delete-top" class="btn btn-delete-icon hidden" aria-label="Delete goal">🗑️</button>
+          </div>
+        </div>
+        <label for="goal-title" class="field-label">Title <span class="required">*</span></label>
+        <input type="text" id="goal-title" class="input" placeholder="What's your goal?">
+        <p id="goal-title-error" class="error-msg hidden">Title is required</p>
+        <label for="goal-desc" class="field-label">Description <span class="optional">(optional)</span></label>
+        <textarea id="goal-desc" class="textarea todo-note-area" placeholder="Why does this goal matter?"></textarea>
+        <label class="field-label">Emoji</label>
+        <div class="habit-emoji-picker" id="goal-emoji-picker">
+          <button class="habit-emoji-btn selected" data-emoji="🎯">🎯</button>
+          <button class="habit-emoji-btn" data-emoji="📚">📚</button>
+          <button class="habit-emoji-btn" data-emoji="💰">💰</button>
+          <button class="habit-emoji-btn" data-emoji="🏋️">🏋️</button>
+          <button class="habit-emoji-btn" data-emoji="🎓">🎓</button>
+          <button class="habit-emoji-btn" data-emoji="💻">💻</button>
+          <button class="habit-emoji-btn" data-emoji="🏆">🏆</button>
+          <button class="habit-emoji-btn" data-emoji="📈">📈</button>
+          <button class="habit-emoji-btn" data-emoji="🔐">🔐</button>
+        </div>
+        <label for="goal-custom-emoji" class="field-label">Or type your own</label>
+        <input type="text" id="goal-custom-emoji" class="input" placeholder="Type any emoji" maxlength="2" style="width:100px;">
+        <label class="field-label">Category</label>
+        <div id="goal-category-picker" class="category-picker"></div>
+        <label for="goal-target-date" class="field-label">Target date <span class="required">*</span></label>
+        <input type="date" id="goal-target-date" class="input">
+        <p id="goal-date-error" class="error-msg hidden">Target date is required</p>
+        <div id="goal-status-section" class="hidden">
+          <label class="field-label">Status</label>
+          <div class="goal-status-picker" id="goal-status-picker">
+            <button class="priority-btn selected" data-status="active">Active</button>
+            <button class="priority-btn" data-status="completed">Completed</button>
+            <button class="priority-btn" data-status="paused">Paused</button>
+          </div>
+        </div>
+        <label class="field-label">Milestones</label>
+        <div id="goal-milestones-editor" class="goal-milestones-editor"></div>
+        <div class="goal-add-milestone-row">
+          <input type="text" id="goal-new-milestone" class="input" placeholder="Add a milestone..." style="margin-bottom:0;">
+          <button id="btn-add-milestone" class="btn btn-secondary btn-sm">Add</button>
+        </div>
+        <div id="goal-manual-progress-section" class="goal-manual-progress-section">
+          <label class="field-label">Manual Progress</label>
+          <div class="goal-slider-row">
+            <input type="range" id="goal-manual-slider" class="goal-slider" min="0" max="100" value="0">
+            <span id="goal-manual-pct" class="progress-pct">0%</span>
+          </div>
+        </div>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-goal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-goal-save-bottom" class="btn btn-primary">Save Goal</button>
         </div>
       </div>
 
@@ -387,6 +536,10 @@
     <button class="bottom-nav-item" data-feature="todo">
       <span class="nav-icon">☑️</span>
       <span class="nav-label">Todo</span>
+    </button>
+    <button class="bottom-nav-item" data-feature="goals">
+      <span class="nav-icon">🎯</span>
+      <span class="nav-label">Goals</span>
     </button>
   </nav>
 

@@ -10,6 +10,8 @@
   const HABITS_KEY = 'lifeboard-habits';
   const HABIT_LOG_KEY = 'lifeboard-habit-log';
   const STICKIES_KEY = 'lifeboard-stickies';
+  const GOALS_KEY = 'lifeboard-goals';
+  const GOALS_FILTER_KEY = 'lifeboard-goals-filter';
 
   const PROMPTS = [
     "What made you smile today?",
@@ -67,6 +69,16 @@
   let selectedHabitFreq = 'daily';
   let editingStickyId = null;
   let selectedStickyColor = 'green';
+  let goals = [];
+  let goalStatusFilter = 'all';
+  let goalCategoryFilter = 'all';
+  let goalSort = 'date';
+  let currentGoalId = null;
+  let editingGoalId = null;
+  let selectedGoalEmoji = '🎯';
+  let selectedGoalCategory = 'personal';
+  let selectedGoalStatus = 'active';
+  let editingMilestones = [];
   let currentFeature = 'today';
   let currentFilter = 'all';
   let currentEntryId = null;
@@ -158,6 +170,11 @@
   const manageHabitsView = $('#manage-habits-view');
   const habitFormView = $('#habit-form-view');
   const stickyFormView = $('#sticky-form-view');
+  const goalsSidebar = $('#goals-sidebar');
+  const goalsList = $('#goals-list');
+  const goalDetailView = $('#goal-detail-view');
+  const goalFormView = $('#goal-form-view');
+  const goalsDetailEmpty = $('#goals-detail-empty');
 
   // ── Storage ──
   function loadEntries() {
@@ -184,6 +201,21 @@
     try { stickies = JSON.parse(localStorage.getItem(STICKIES_KEY)) || []; } catch { stickies = []; }
   }
   function saveStickies() { localStorage.setItem(STICKIES_KEY, JSON.stringify(stickies)); }
+
+  function loadGoals() {
+    try { goals = JSON.parse(localStorage.getItem(GOALS_KEY)) || []; } catch { goals = []; }
+  }
+  function saveGoals() { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); }
+
+  function loadGoalFilter() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(GOALS_FILTER_KEY));
+      if (saved) { goalStatusFilter = saved.status || 'all'; goalSort = saved.sort || 'date'; }
+    } catch {}
+  }
+  function saveGoalFilter() {
+    localStorage.setItem(GOALS_FILTER_KEY, JSON.stringify({ status: goalStatusFilter, sort: goalSort }));
+  }
 
   function loadCategories() {
     try {
@@ -292,10 +324,12 @@
     $('#today-header').classList.toggle('hidden', feature !== 'today');
     $('#journal-header').classList.toggle('hidden', feature !== 'journal');
     $('#todo-header').classList.toggle('hidden', feature !== 'todo');
+    $('#goals-header').classList.toggle('hidden', feature !== 'goals');
 
     todaySidebar.classList.toggle('hidden', feature !== 'today');
     journalSidebar.classList.toggle('hidden', feature !== 'journal');
     todoSidebar.classList.toggle('hidden', feature !== 'todo');
+    goalsSidebar.classList.toggle('hidden', feature !== 'goals');
 
     if (fabBtn) fabBtn.classList.toggle('hidden', feature !== 'journal');
 
@@ -305,10 +339,13 @@
     manageHabitsView.classList.add('hidden');
     habitFormView.classList.add('hidden');
     stickyFormView.classList.add('hidden');
+    goalDetailView.classList.add('hidden');
+    goalFormView.classList.add('hidden');
 
     if (feature === 'today') {
       detailEmpty.classList.add('hidden');
       todoDetailEmpty.classList.add('hidden');
+      goalsDetailEmpty.classList.add('hidden');
       todayDashboard.classList.remove('hidden');
       renderTodayDashboard();
       renderTodaySidebarHabits();
@@ -316,20 +353,35 @@
       todayDashboard.classList.add('hidden');
       detailEmpty.classList.remove('hidden');
       todoDetailEmpty.classList.add('hidden');
+      goalsDetailEmpty.classList.add('hidden');
       currentEntryId = null;
       renderEntries();
-    } else {
+    } else if (feature === 'todo') {
       todayDashboard.classList.add('hidden');
       detailEmpty.classList.add('hidden');
       todoDetailEmpty.classList.remove('hidden');
+      goalsDetailEmpty.classList.add('hidden');
       currentTodoId = null;
       renderTodos();
       renderTodoCategoryFilters();
+    } else if (feature === 'goals') {
+      todayDashboard.classList.add('hidden');
+      detailEmpty.classList.add('hidden');
+      todoDetailEmpty.classList.add('hidden');
+      goalsDetailEmpty.classList.remove('hidden');
+      currentGoalId = null;
+      renderGoals();
+      renderGoalCategoryFilters();
     }
 
     if (isMobile()) {
-      sidebar.classList.add('active');
-      detailPanel.classList.remove('active');
+      if (feature === 'today') {
+        sidebar.classList.remove('active');
+        detailPanel.classList.add('active');
+      } else {
+        sidebar.classList.add('active');
+        detailPanel.classList.remove('active');
+      }
     }
   }
 
@@ -896,8 +948,36 @@
     const habitsDone = todaysHabits.filter(h => (habitLog[tk] || []).includes(h.id)).length;
     $('#today-habits-count').textContent = `${habitsDone}/${todaysHabits.length}`;
 
+    renderDashboardHabits();
     renderTodayReminders();
+    renderTodayGoals();
     renderTodayTasks();
+  }
+
+  function renderDashboardHabits() {
+    const list = $('#today-dashboard-habits-list');
+    if (!list) return;
+    const todaysHabits = getTodaysHabits();
+    const tk = todayKey();
+    if (todaysHabits.length === 0) {
+      list.innerHTML = '<p class="today-reminders-empty">No habits yet. Tap Manage to add one.</p>';
+      return;
+    }
+    list.innerHTML = todaysHabits.map(h => {
+      const isDone = (habitLog[tk] || []).includes(h.id);
+      const streak = getHabitStreak(h);
+      return `
+        <div class="habit-check-card${isDone ? ' done' : ''}" data-hid="${h.id}">
+          <div class="habit-checkbox${isDone ? ' checked' : ''}" data-hid="${h.id}">${isDone ? '✓' : ''}</div>
+          <span class="habit-card-emoji">${h.emoji}</span>
+          <div class="habit-card-body">
+            <div class="habit-card-name">${escapeHtml(h.name)}</div>
+            <div class="habit-card-meta">
+              <span class="habit-streak">🔥 ${streak} days</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function renderTodayReminders() {
@@ -955,7 +1035,7 @@
   }
 
   function showTodayHome() {
-    if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
     manageHabitsView.classList.add('hidden');
     habitFormView.classList.add('hidden');
     stickyFormView.classList.add('hidden');
@@ -1109,6 +1189,416 @@
   }
 
   // ══════════════════════════════════════
+  //  GOALS
+  // ══════════════════════════════════════
+
+  function getGoalProgress(goal) {
+    if (goal.milestones && goal.milestones.length > 0) {
+      const done = goal.milestones.filter(m => m.completed).length;
+      return Math.round(done / goal.milestones.length * 100);
+    }
+    return goal.manualProgress || 0;
+  }
+
+  function getGoalDeadlineInfo(goal) {
+    if (!goal.targetDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(goal.targetDate + 'T00:00:00');
+    const diff = Math.floor((target - today) / 86400000);
+    if (goal.status === 'completed') {
+      return { text: 'Completed ' + target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: '' };
+    }
+    if (diff < 0) return { text: 'Overdue: ' + target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: 'overdue' };
+    if (diff === 0) return { text: 'Due today', cls: 'today' };
+    if (diff <= 7) return { text: diff + ' day' + (diff > 1 ? 's' : '') + ' left', cls: 'soon' };
+    return { text: target.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), cls: '' };
+  }
+
+  function getFilteredGoals() {
+    let list = [...goals];
+    if (goalStatusFilter === 'active') list = list.filter(g => g.status === 'active');
+    else if (goalStatusFilter === 'completed') list = list.filter(g => g.status === 'completed');
+    else if (goalStatusFilter === 'paused') list = list.filter(g => g.status === 'paused');
+    if (goalCategoryFilter !== 'all') list = list.filter(g => g.category === goalCategoryFilter);
+
+    list.sort((a, b) => {
+      if (goalSort === 'date') {
+        const aD = a.targetDate || '9999-12-31';
+        const bD = b.targetDate || '9999-12-31';
+        return aD.localeCompare(bD);
+      }
+      if (goalSort === 'progress') return getGoalProgress(b) - getGoalProgress(a);
+      if (goalSort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      return 0;
+    });
+    return list;
+  }
+
+  function renderGoalSummary() {
+    const active = goals.filter(g => g.status === 'active').length;
+    const completed = goals.filter(g => g.status === 'completed').length;
+    const parts = [];
+    if (active) parts.push(active + ' active');
+    if (completed) parts.push(completed + ' completed');
+    const text = parts.length ? parts.join(' · ') : 'No goals yet';
+    $('#goals-summary-text').textContent = text;
+    const subtitleEl = $('#goals-subtitle');
+    if (subtitleEl) subtitleEl.textContent = text;
+  }
+
+  function renderGoalCategoryFilters() {
+    const container = $('#goal-category-filters');
+    let html = '';
+    categories.forEach(c => {
+      html += `<button class="todo-chip${goalCategoryFilter === c.id ? ' active' : ''}" data-gfilter="category" data-value="${c.id}"><span class="cat-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</button>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function renderGoals() {
+    const filtered = getFilteredGoals();
+    renderGoalSummary();
+
+    if (filtered.length === 0) {
+      const msg = (goalStatusFilter !== 'all' || goalCategoryFilter !== 'all')
+        ? 'No goals match these filters.'
+        : 'No goals yet. Tap + to set your first goal!';
+      goalsList.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><p>${msg}</p></div>`;
+      return;
+    }
+
+    goalsList.innerHTML = filtered.map(g => {
+      const cat = getCat(g.category);
+      const pct = getGoalProgress(g);
+      const deadline = getGoalDeadlineInfo(g);
+      const hasMilestones = g.milestones && g.milestones.length > 0;
+      const doneCount = hasMilestones ? g.milestones.filter(m => m.completed).length : 0;
+      const totalCount = hasMilestones ? g.milestones.length : 0;
+      const statusLabel = g.status === 'completed' ? 'Done 🎉' : g.status === 'paused' ? 'Paused' : 'Active';
+      return `
+        <div class="goal-card${g.status === 'completed' ? ' completed' : ''}${g.id === currentGoalId ? ' active' : ''}" data-gid="${g.id}">
+          <div class="goal-card-top">
+            <span class="goal-card-emoji">${g.emoji}</span>
+            <div class="goal-card-body">
+              <div class="goal-card-title">${escapeHtml(g.title)}</div>
+              <div class="goal-card-meta">
+                <span class="task-category-tag"><span class="cat-dot" style="background:${cat.color}"></span>${escapeHtml(cat.name)}</span>
+                ${deadline ? `<span class="goal-deadline-tag ${deadline.cls}">${deadline.text}</span>` : ''}
+              </div>
+            </div>
+            <span class="goal-status-badge ${g.status}">${statusLabel}</span>
+          </div>
+          <div class="goal-card-progress">
+            <span class="goal-progress-label">${hasMilestones ? doneCount + ' of ' + totalCount + ' milestones' : 'Manual progress'}</span>
+            <span class="goal-progress-pct">${pct}%</span>
+          </div>
+          <div class="progress-bar-track goal-progress-track">
+            <div class="progress-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function showGoalsHome() {
+    if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+    goalDetailView.classList.add('hidden');
+    goalFormView.classList.add('hidden');
+    todayDashboard.classList.add('hidden');
+    goalsDetailEmpty.classList.remove('hidden');
+    currentGoalId = null;
+    editingGoalId = null;
+    renderGoals();
+  }
+
+  function showGoalDetail(goalId) {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return;
+    currentGoalId = goalId;
+    const cat = getCat(goal.category);
+    const pct = getGoalProgress(goal);
+    const deadline = getGoalDeadlineInfo(goal);
+    const hasMilestones = goal.milestones && goal.milestones.length > 0;
+
+    $('#goal-detail-emoji').textContent = goal.emoji;
+    $('#goal-detail-title').textContent = goal.title;
+
+    const statusEl = $('#goal-detail-status');
+    statusEl.className = 'goal-status-badge ' + goal.status;
+    statusEl.textContent = goal.status === 'completed' ? 'Done 🎉' : goal.status === 'paused' ? 'Paused' : 'Active';
+
+    $('#goal-detail-cat-dot').style.background = cat.color;
+    $('#goal-detail-cat-name').textContent = cat.name;
+
+    const deadlineEl = $('#goal-detail-deadline');
+    if (deadline) {
+      deadlineEl.textContent = deadline.text;
+      deadlineEl.className = 'goal-detail-deadline ' + deadline.cls;
+    } else {
+      deadlineEl.textContent = '';
+    }
+
+    const descEl = $('#goal-detail-desc');
+    descEl.textContent = goal.description || '';
+    descEl.classList.toggle('hidden', !goal.description);
+
+    $('#goal-detail-progress-pct').textContent = pct + '%';
+    $('#goal-detail-progress-fill').style.width = pct + '%';
+
+    if (hasMilestones) {
+      const done = goal.milestones.filter(m => m.completed).length;
+      $('#goal-detail-progress-text').textContent = 'Progress';
+      $('#goal-detail-milestone-count').textContent = done + ' of ' + goal.milestones.length + ' milestones completed';
+    } else {
+      $('#goal-detail-progress-text').textContent = 'Manual progress';
+      $('#goal-detail-milestone-count').textContent = '';
+    }
+
+    const milestonesSection = $('#goal-detail-milestones');
+    const milestoneList = $('#goal-milestone-list');
+    if (hasMilestones) {
+      milestonesSection.classList.remove('hidden');
+      milestoneList.innerHTML = goal.milestones.map(m => `
+        <div class="milestone-card${m.completed ? ' completed' : ''}" data-mid="${m.id}" data-gid="${goalId}">
+          <div class="milestone-checkbox${m.completed ? ' checked' : ''}" data-mid="${m.id}" data-gid="${goalId}">${m.completed ? '✓' : ''}</div>
+          <span class="milestone-name">${escapeHtml(m.name)}</span>
+        </div>
+      `).join('');
+    } else {
+      milestonesSection.classList.add('hidden');
+    }
+
+    todayDashboard.classList.add('hidden');
+    goalsDetailEmpty.classList.add('hidden');
+    goalFormView.classList.add('hidden');
+    goalDetailView.classList.remove('hidden');
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    renderGoals();
+  }
+
+  function showGoalForm(editId) {
+    editingGoalId = editId || null;
+    const titleInput = $('#goal-title');
+    const descInput = $('#goal-desc');
+    const dateInput = $('#goal-target-date');
+    const heading = $('#goal-form-heading');
+    const titleError = $('#goal-title-error');
+    const dateError = $('#goal-date-error');
+    const customEmoji = $('#goal-custom-emoji');
+    titleError.classList.add('hidden');
+    dateError.classList.add('hidden');
+
+    if (editingGoalId) {
+      const g = goals.find(x => x.id === editingGoalId);
+      if (!g) return;
+      heading.textContent = 'Edit Goal';
+      titleInput.value = g.title;
+      descInput.value = g.description || '';
+      dateInput.value = g.targetDate || '';
+      selectedGoalEmoji = g.emoji;
+      selectedGoalCategory = g.category;
+      selectedGoalStatus = g.status;
+      editingMilestones = (g.milestones || []).map(m => ({ ...m }));
+      $('#goal-status-section').classList.remove('hidden');
+      $$('#goal-status-picker .priority-btn').forEach(b => b.classList.toggle('selected', b.dataset.status === g.status));
+    } else {
+      heading.textContent = 'New Goal';
+      titleInput.value = '';
+      descInput.value = '';
+      dateInput.value = '';
+      selectedGoalEmoji = '🎯';
+      selectedGoalCategory = 'personal';
+      selectedGoalStatus = 'active';
+      editingMilestones = [];
+      $('#goal-status-section').classList.add('hidden');
+    }
+
+    customEmoji.value = '';
+    $$('#goal-emoji-picker .habit-emoji-btn').forEach(b => b.classList.toggle('selected', b.dataset.emoji === selectedGoalEmoji));
+    $('#btn-goal-delete-top').classList.toggle('hidden', !editingGoalId);
+
+    renderGoalCategoryPickerForm();
+    renderMilestonesEditor();
+    updateManualProgressVisibility();
+
+    todayDashboard.classList.add('hidden');
+    goalsDetailEmpty.classList.add('hidden');
+    goalDetailView.classList.add('hidden');
+    goalFormView.classList.remove('hidden');
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    titleInput.focus();
+  }
+
+  function renderGoalCategoryPickerForm() {
+    const container = $('#goal-category-picker');
+    container.innerHTML = categories.map(c => `
+      <button class="cat-pick-btn${selectedGoalCategory === c.id ? ' selected' : ''}" data-catid="${c.id}">
+        <span class="cat-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}
+      </button>
+    `).join('');
+  }
+
+  function renderMilestonesEditor() {
+    const container = $('#goal-milestones-editor');
+    if (editingMilestones.length === 0) {
+      container.innerHTML = '<p class="goal-no-milestones">No milestones added. Use the manual progress slider below.</p>';
+      return;
+    }
+    container.innerHTML = editingMilestones.map((m, i) => `
+      <div class="milestone-edit-card" data-midx="${i}">
+        <div class="manage-habit-reorder">
+          <button data-mdir="up" data-midx="${i}" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button data-mdir="down" data-midx="${i}" ${i === editingMilestones.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <input type="text" class="input milestone-name-input" value="${escapeHtml(m.name)}" data-midx="${i}" style="margin-bottom:0;flex:1;">
+        <button class="milestone-delete-btn" data-midx="${i}">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function updateManualProgressVisibility() {
+    const section = $('#goal-manual-progress-section');
+    if (editingMilestones.length === 0) {
+      section.classList.remove('hidden');
+      if (editingGoalId) {
+        const g = goals.find(x => x.id === editingGoalId);
+        const val = g ? (g.manualProgress || 0) : 0;
+        $('#goal-manual-slider').value = val;
+        $('#goal-manual-pct').textContent = val + '%';
+      } else {
+        $('#goal-manual-slider').value = 0;
+        $('#goal-manual-pct').textContent = '0%';
+      }
+    } else {
+      section.classList.add('hidden');
+    }
+  }
+
+  function saveGoal() {
+    const titleInput = $('#goal-title');
+    const descInput = $('#goal-desc');
+    const dateInput = $('#goal-target-date');
+    const titleError = $('#goal-title-error');
+    const dateError = $('#goal-date-error');
+    const title = titleInput.value.trim();
+    const targetDate = dateInput.value;
+
+    let hasError = false;
+    if (!title) { titleError.classList.remove('hidden'); hasError = true; } else titleError.classList.add('hidden');
+    if (!targetDate) { dateError.classList.remove('hidden'); hasError = true; } else dateError.classList.add('hidden');
+    if (hasError) return;
+
+    $$('.milestone-name-input').forEach((input, i) => {
+      if (editingMilestones[i]) editingMilestones[i].name = input.value.trim();
+    });
+    editingMilestones = editingMilestones.filter(m => m.name);
+
+    const customEmoji = $('#goal-custom-emoji').value.trim();
+    const emoji = customEmoji || selectedGoalEmoji;
+    const manualProgress = editingMilestones.length === 0 ? parseInt($('#goal-manual-slider').value) || 0 : 0;
+
+    if (editingGoalId) {
+      const g = goals.find(x => x.id === editingGoalId);
+      if (g) {
+        g.title = title;
+        g.description = descInput.value.trim();
+        g.category = selectedGoalCategory;
+        g.targetDate = targetDate;
+        g.emoji = emoji;
+        g.status = selectedGoalStatus;
+        g.milestones = editingMilestones;
+        g.manualProgress = manualProgress;
+      }
+    } else {
+      goals.push({
+        id: uid(), title,
+        description: descInput.value.trim(),
+        category: selectedGoalCategory,
+        targetDate, emoji,
+        status: 'active',
+        milestones: editingMilestones,
+        manualProgress,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    checkGoalAutoComplete();
+    saveGoals();
+    renderGoals();
+    if (editingGoalId) {
+      showGoalDetail(editingGoalId);
+    } else {
+      showGoalsHome();
+    }
+    showToast(editingGoalId ? 'Goal updated' : 'Goal created');
+  }
+
+  function checkGoalAutoComplete() {
+    goals.forEach(g => {
+      if (g.milestones && g.milestones.length > 0 && g.status === 'active') {
+        if (g.milestones.every(m => m.completed)) {
+          g.status = 'completed';
+        }
+      }
+    });
+  }
+
+  function toggleMilestone(goalId, milestoneId) {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal || !goal.milestones) return;
+    const milestone = goal.milestones.find(m => m.id === milestoneId);
+    if (!milestone) return;
+    milestone.completed = !milestone.completed;
+
+    if (goal.milestones.every(m => m.completed) && goal.status === 'active') {
+      goal.status = 'completed';
+      showToast('Goal achieved! 🎉');
+    } else if (!goal.milestones.every(m => m.completed) && goal.status === 'completed') {
+      goal.status = 'active';
+    }
+
+    saveGoals();
+    showGoalDetail(goalId);
+  }
+
+  function renderTodayGoals() {
+    const container = $('#today-goals-overview');
+    const activeGoals = goals.filter(g => g.status === 'active');
+
+    if (activeGoals.length === 0) {
+      container.innerHTML = '<p class="today-reminders-empty">No active goals. Set one to stay focused.</p>';
+      return;
+    }
+
+    const sorted = [...activeGoals].sort((a, b) => {
+      const aD = a.targetDate || '9999-12-31';
+      const bD = b.targetDate || '9999-12-31';
+      return aD.localeCompare(bD);
+    });
+
+    const display = sorted.slice(0, 4);
+    container.innerHTML = display.map(g => {
+      const pct = getGoalProgress(g);
+      const deadline = getGoalDeadlineInfo(g);
+      let hint = '';
+      let hintCls = '';
+      if (deadline && deadline.cls === 'overdue') { hint = 'Overdue'; hintCls = 'overdue'; }
+      else if (deadline && deadline.cls === 'soon') { hint = deadline.text; hintCls = 'soon'; }
+      else if (pct >= 75) { hint = 'Almost there!'; hintCls = 'almost'; }
+      return `
+        <div class="today-goal-item" data-gid="${g.id}">
+          <div class="today-goal-top">
+            <span class="today-goal-emoji">${g.emoji}</span>
+            <span class="today-goal-name">${escapeHtml(g.title)}</span>
+            ${hint ? `<span class="today-goal-hint ${hintCls}">${hint}</span>` : ''}
+            <span class="today-goal-pct">${pct}%</span>
+          </div>
+          <div class="progress-bar-track goal-progress-track-sm"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════
   //  EVENT HANDLERS
   // ══════════════════════════════════════
 
@@ -1143,6 +1633,21 @@
       return;
     }
   });
+
+  // Dashboard habits: checkbox toggle (mobile)
+  $('#today-dashboard-habits-list').addEventListener('click', e => {
+    const checkbox = e.target.closest('.habit-checkbox');
+    if (checkbox) {
+      e.stopPropagation();
+      toggleHabitDone(checkbox.dataset.hid);
+      renderTodaySidebarHabits();
+      renderTodayDashboard();
+      return;
+    }
+  });
+
+  // Dashboard habits: manage link (mobile)
+  $('#btn-manage-habits-dash').addEventListener('click', showManageHabits);
 
   // Manage link
   $('#btn-manage-habits').addEventListener('click', showManageHabits);
@@ -1230,6 +1735,164 @@
     modalText.textContent = 'Delete this reminder?';
     modalConfirm.textContent = 'Delete';
     deleteModal.classList.remove('hidden');
+  });
+
+  // ── Goals Event Handlers ──
+
+  // Goal card clicks
+  goalsList.addEventListener('click', e => {
+    const card = e.target.closest('.goal-card');
+    if (card) showGoalDetail(card.dataset.gid);
+  });
+
+  // New goal buttons
+  $('#btn-new-goal').addEventListener('click', () => showGoalForm());
+  $('#btn-new-goal-header').addEventListener('click', () => showGoalForm());
+
+  // Goal filter clicks
+  document.querySelector('.goal-toolbar').addEventListener('click', e => {
+    const btn = e.target.closest('.todo-chip');
+    if (!btn) return;
+    const filterType = btn.dataset.gfilter;
+    const value = btn.dataset.value;
+    if (filterType === 'status') {
+      goalStatusFilter = value;
+      $$('[data-gfilter="status"]').forEach(b => b.classList.toggle('active', b.dataset.value === value));
+    } else if (filterType === 'category') {
+      goalCategoryFilter = goalCategoryFilter === value ? 'all' : value;
+      $$('[data-gfilter="category"]').forEach(b => b.classList.toggle('active', b.dataset.value === goalCategoryFilter));
+    }
+    saveGoalFilter();
+    renderGoals();
+  });
+
+  // Goal detail: edit
+  $('#btn-goal-edit').addEventListener('click', () => { if (currentGoalId) showGoalForm(currentGoalId); });
+  $('#btn-goal-edit-bottom').addEventListener('click', () => { if (currentGoalId) showGoalForm(currentGoalId); });
+
+  // Goal detail: delete
+  function promptGoalDelete() {
+    if (!currentGoalId) return;
+    deleteMode = 'goal';
+    modalText.textContent = 'Delete this goal and all its milestones?';
+    modalConfirm.textContent = 'Delete';
+    deleteModal.classList.remove('hidden');
+  }
+  $('#btn-goal-delete').addEventListener('click', promptGoalDelete);
+  $('#btn-goal-delete-bottom').addEventListener('click', promptGoalDelete);
+
+  // Goal detail: milestone checkbox
+  $('#goal-milestone-list').addEventListener('click', e => {
+    const checkbox = e.target.closest('.milestone-checkbox');
+    if (checkbox) {
+      e.stopPropagation();
+      toggleMilestone(checkbox.dataset.gid, checkbox.dataset.mid);
+      return;
+    }
+    const card = e.target.closest('.milestone-card');
+    if (card) toggleMilestone(card.dataset.gid, card.dataset.mid);
+  });
+
+  // Goal form: emoji picker
+  $('#goal-emoji-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.habit-emoji-btn');
+    if (!btn) return;
+    $$('#goal-emoji-picker .habit-emoji-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedGoalEmoji = btn.dataset.emoji;
+    $('#goal-custom-emoji').value = '';
+  });
+
+  // Goal form: category picker
+  $('#goal-category-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.cat-pick-btn');
+    if (!btn) return;
+    selectedGoalCategory = btn.dataset.catid;
+    $$('#goal-category-picker .cat-pick-btn').forEach(b => b.classList.toggle('selected', b.dataset.catid === selectedGoalCategory));
+  });
+
+  // Goal form: status picker
+  $('#goal-status-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.priority-btn');
+    if (!btn) return;
+    $$('#goal-status-picker .priority-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedGoalStatus = btn.dataset.status;
+  });
+
+  // Goal form: save/cancel
+  $('#btn-goal-save-top').addEventListener('click', saveGoal);
+  $('#btn-goal-save-bottom').addEventListener('click', saveGoal);
+  $('#btn-goal-cancel').addEventListener('click', showGoalsHome);
+
+  // Goal form: delete (top button when editing)
+  $('#btn-goal-delete-top').addEventListener('click', () => {
+    if (!editingGoalId) return;
+    currentGoalId = editingGoalId;
+    promptGoalDelete();
+  });
+
+  // Goal form: add milestone
+  $('#btn-add-milestone').addEventListener('click', () => {
+    const input = $('#goal-new-milestone');
+    const name = input.value.trim();
+    if (!name) return;
+    editingMilestones.push({ id: uid(), name, completed: false });
+    input.value = '';
+    renderMilestonesEditor();
+    updateManualProgressVisibility();
+  });
+
+  $('#goal-new-milestone').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      $('#btn-add-milestone').click();
+    }
+  });
+
+  // Goal form: milestone reorder/delete
+  $('#goal-milestones-editor').addEventListener('click', e => {
+    const reorderBtn = e.target.closest('[data-mdir]');
+    if (reorderBtn) {
+      const idx = parseInt(reorderBtn.dataset.midx);
+      const dir = reorderBtn.dataset.mdir;
+      // Save current input values first
+      $$('.milestone-name-input').forEach((input, i) => {
+        if (editingMilestones[i]) editingMilestones[i].name = input.value.trim();
+      });
+      if (dir === 'up' && idx > 0) { [editingMilestones[idx], editingMilestones[idx-1]] = [editingMilestones[idx-1], editingMilestones[idx]]; }
+      else if (dir === 'down' && idx < editingMilestones.length - 1) { [editingMilestones[idx], editingMilestones[idx+1]] = [editingMilestones[idx+1], editingMilestones[idx]]; }
+      renderMilestonesEditor();
+      return;
+    }
+    const delBtn = e.target.closest('.milestone-delete-btn');
+    if (delBtn) {
+      const idx = parseInt(delBtn.dataset.midx);
+      // Save current input values first
+      $$('.milestone-name-input').forEach((input, i) => {
+        if (editingMilestones[i]) editingMilestones[i].name = input.value.trim();
+      });
+      editingMilestones.splice(idx, 1);
+      renderMilestonesEditor();
+      updateManualProgressVisibility();
+    }
+  });
+
+  // Goal form: manual slider
+  $('#goal-manual-slider').addEventListener('input', e => {
+    $('#goal-manual-pct').textContent = e.target.value + '%';
+  });
+
+  // Dashboard: View all goals
+  $('#btn-view-all-goals').addEventListener('click', () => switchFeature('goals'));
+
+  // Dashboard: goal item click
+  $('#today-goals-overview').addEventListener('click', e => {
+    const item = e.target.closest('.today-goal-item');
+    if (item) {
+      switchFeature('goals');
+      showGoalDetail(item.dataset.gid);
+    }
   });
 
   // Pending tasks: click to go to todo
@@ -1359,6 +2022,12 @@
       editingStickyId = null;
       showTodayHome();
       showToast('Reminder deleted');
+    } else if (deleteMode === 'goal') {
+      goals = goals.filter(g => g.id !== currentGoalId);
+      saveGoals(); deleteModal.classList.add('hidden'); deleteMode = 'single';
+      currentGoalId = null;
+      showGoalsHome();
+      showToast('Goal deleted');
     }
   });
 
@@ -1377,6 +2046,7 @@
       if (t === 'todo-home') showTodoHome();
       else if (t === 'today-home') showTodayHome();
       else if (t === 'manage-habits') showManageHabits();
+      else if (t === 'goals-home') showGoalsHome();
       else showJournalHome();
     });
   });
@@ -1580,6 +2250,8 @@
   loadHabits();
   loadHabitLog();
   loadStickies();
+  loadGoals();
+  loadGoalFilter();
   renderStreak();
   switchFeature('today');
 })();
