@@ -12,6 +12,9 @@
   const STICKIES_KEY = 'lifeboard-stickies';
   const GOALS_KEY = 'lifeboard-goals';
   const GOALS_FILTER_KEY = 'lifeboard-goals-filter';
+  const REFLECTIONS_KEY = 'lifeboard-reflections';
+  const LIFE_SCORES_KEY = 'lifeboard-life-scores';
+  const LESSONS_KEY = 'lifeboard-lessons';
 
   const PROMPTS = [
     "What made you smile today?",
@@ -79,6 +82,18 @@
   let selectedGoalCategory = 'personal';
   let selectedGoalStatus = 'active';
   let editingMilestones = [];
+  let reflections = [];
+  let lifeScores = [];
+  let lessons = [];
+  let journalMode = 'entries';
+  let reflectSection = 'checkin';
+  let currentCheckinId = null;
+  let editingCheckinId = null;
+  let checkinRating = 0;
+  let currentLessonId = null;
+  let editingLessonId = null;
+  let lessonSearchQuery = '';
+  let moodPeriod = 7;
   let currentFeature = 'today';
   let currentFilter = 'all';
   let currentEntryId = null;
@@ -175,6 +190,10 @@
   const goalDetailView = $('#goal-detail-view');
   const goalFormView = $('#goal-form-view');
   const goalsDetailEmpty = $('#goals-detail-empty');
+  const checkinDetailView = $('#checkin-detail-view');
+  const checkinFormView = $('#checkin-form-view');
+  const lifescoreFormView = $('#lifescore-form-view');
+  const lessonsEditView = $('#lessons-edit-view');
 
   // ── Storage ──
   function loadEntries() {
@@ -206,6 +225,21 @@
     try { goals = JSON.parse(localStorage.getItem(GOALS_KEY)) || []; } catch { goals = []; }
   }
   function saveGoals() { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); }
+
+  function loadReflections() {
+    try { reflections = JSON.parse(localStorage.getItem(REFLECTIONS_KEY)) || []; } catch { reflections = []; }
+  }
+  function saveReflections() { localStorage.setItem(REFLECTIONS_KEY, JSON.stringify(reflections)); }
+
+  function loadLifeScores() {
+    try { lifeScores = JSON.parse(localStorage.getItem(LIFE_SCORES_KEY)) || []; } catch { lifeScores = []; }
+  }
+  function saveLifeScores() { localStorage.setItem(LIFE_SCORES_KEY, JSON.stringify(lifeScores)); }
+
+  function loadLessons() {
+    try { lessons = JSON.parse(localStorage.getItem(LESSONS_KEY)) || []; } catch { lessons = []; }
+  }
+  function saveLessons() { localStorage.setItem(LESSONS_KEY, JSON.stringify(lessons)); }
 
   function loadGoalFilter() {
     try {
@@ -341,6 +375,10 @@
     stickyFormView.classList.add('hidden');
     goalDetailView.classList.add('hidden');
     goalFormView.classList.add('hidden');
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
 
     if (feature === 'today') {
       detailEmpty.classList.add('hidden');
@@ -351,11 +389,16 @@
       renderTodaySidebarHabits();
     } else if (feature === 'journal') {
       todayDashboard.classList.add('hidden');
-      detailEmpty.classList.remove('hidden');
       todoDetailEmpty.classList.add('hidden');
       goalsDetailEmpty.classList.add('hidden');
       currentEntryId = null;
-      renderEntries();
+      if (journalMode === 'entries') {
+        detailEmpty.classList.remove('hidden');
+        renderEntries();
+      } else {
+        detailEmpty.classList.add('hidden');
+        switchReflectSection(reflectSection);
+      }
     } else if (feature === 'todo') {
       todayDashboard.classList.add('hidden');
       detailEmpty.classList.add('hidden');
@@ -476,6 +519,10 @@
     viewEntry.classList.add('hidden');
     writeEntry.classList.add('hidden');
     todayDashboard.classList.add('hidden');
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
     detailEmpty.classList.remove('hidden');
     currentEntryId = null;
     editingEntryId = null;
@@ -951,6 +998,7 @@
     renderDashboardHabits();
     renderTodayReminders();
     renderTodayGoals();
+    renderDashboardReflection();
     renderTodayTasks();
   }
 
@@ -1599,6 +1647,522 @@
   }
 
   // ══════════════════════════════════════
+  //  SELF-REFLECTION
+  // ══════════════════════════════════════
+
+  const LIFE_AREAS = [
+    { key: 'health', label: 'Health & Fitness', emoji: '🏋️' },
+    { key: 'school', label: 'School / Career', emoji: '📚' },
+    { key: 'relationships', label: 'Relationships', emoji: '❤️' },
+    { key: 'finances', label: 'Finances / Crypto', emoji: '💰' },
+    { key: 'growth', label: 'Personal Growth', emoji: '🌱' },
+    { key: 'happiness', label: 'Happiness', emoji: '😊' }
+  ];
+
+  function switchJournalMode(mode) {
+    journalMode = mode;
+    $$('.mode-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.jmode === mode));
+    $('#journal-entries-content').classList.toggle('hidden', mode !== 'entries');
+    $('#journal-reflect-content').classList.toggle('hidden', mode !== 'reflect');
+
+    if (mode === 'entries') {
+      if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+      detailEmpty.classList.remove('hidden');
+      checkinDetailView.classList.add('hidden');
+      checkinFormView.classList.add('hidden');
+      lifescoreFormView.classList.add('hidden');
+      lessonsEditView.classList.add('hidden');
+      if (fabBtn && currentFeature === 'journal') fabBtn.classList.remove('hidden');
+      currentEntryId = null;
+      renderEntries();
+    } else {
+      if (fabBtn) fabBtn.classList.add('hidden');
+      detailEmpty.classList.add('hidden');
+      viewEntry.classList.add('hidden');
+      writeEntry.classList.add('hidden');
+      checkinDetailView.classList.add('hidden');
+      checkinFormView.classList.add('hidden');
+      lifescoreFormView.classList.add('hidden');
+      lessonsEditView.classList.add('hidden');
+      if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+      switchReflectSection(reflectSection);
+    }
+  }
+
+  function switchReflectSection(section) {
+    reflectSection = section;
+    $$('.reflect-pill[data-rsection]').forEach(b => b.classList.toggle('active', b.dataset.rsection === section));
+
+    $$('.reflect-section-sidebar').forEach(el => el.classList.add('hidden'));
+    const sidebarSection = $(`#reflect-${section}-sidebar`);
+    if (sidebarSection) sidebarSection.classList.remove('hidden');
+
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
+    detailEmpty.classList.add('hidden');
+
+    if (section === 'checkin') renderCheckinList();
+    else if (section === 'lifescore') renderLifeScoreView();
+    else if (section === 'mood') renderMoodInsights();
+    else if (section === 'lessons') renderLessonsList();
+
+    if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+  }
+
+  function showReflectHome() {
+    if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
+    currentCheckinId = null;
+    editingCheckinId = null;
+    currentLessonId = null;
+    editingLessonId = null;
+    switchReflectSection(reflectSection);
+  }
+
+  // ── Weekly Check-In ──
+
+  function renderCheckinList() {
+    const list = $('#checkin-list');
+    if (reflections.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><p>No check-ins yet. Start your first weekly reflection!</p></div>';
+      return;
+    }
+    const sorted = [...reflections].sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.innerHTML = sorted.map(r => {
+      const d = new Date(r.date);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const preview = r.wentWell ? r.wentWell.substring(0, 80) + (r.wentWell.length > 80 ? '...' : '') : '';
+      return `
+        <div class="entry-card checkin-card${r.id === currentCheckinId ? ' active' : ''}" data-cid="${r.id}">
+          <div class="card-top">
+            <span class="card-date">Week of ${dateStr}</span>
+            <span class="checkin-stars-mini">${stars}</span>
+          </div>
+          <div class="card-title">${escapeHtml(r.wentWell ? r.wentWell.split('\n')[0].substring(0, 60) : 'Check-In')}</div>
+          ${preview ? `<div class="card-preview">${escapeHtml(preview)}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function showCheckinDetail(id) {
+    const r = reflections.find(x => x.id === id);
+    if (!r) return;
+    currentCheckinId = id;
+    editingCheckinId = null;
+
+    const d = new Date(r.date);
+    const dateStr = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    $('#checkin-detail-date').textContent = 'Week of ' + dateStr;
+    $('#checkin-detail-stars').innerHTML = '<span style="color:var(--highlight);font-size:1.3rem;letter-spacing:2px">' + '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) + '</span>';
+    $('#checkin-a1').textContent = r.wentWell || '';
+    $('#checkin-a2').textContent = r.didntGoWell || '';
+    $('#checkin-a3').textContent = r.learned || '';
+    $('#checkin-a4').textContent = r.differently || '';
+
+    todayDashboard.classList.add('hidden');
+    detailEmpty.classList.add('hidden');
+    viewEntry.classList.add('hidden');
+    writeEntry.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
+    checkinDetailView.classList.remove('hidden');
+
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    renderCheckinList();
+  }
+
+  function showCheckinForm(editId) {
+    editingCheckinId = editId || null;
+    const heading = $('#checkin-form-heading');
+    $('#checkin-error').classList.add('hidden');
+    $('#checkin-star-error').classList.add('hidden');
+
+    if (editingCheckinId) {
+      const r = reflections.find(x => x.id === editingCheckinId);
+      if (!r) return;
+      heading.textContent = 'Edit Check-In';
+      $('#checkin-q1').value = r.wentWell || '';
+      $('#checkin-q2').value = r.didntGoWell || '';
+      $('#checkin-q3').value = r.learned || '';
+      $('#checkin-q4').value = r.differently || '';
+      checkinRating = r.rating || 0;
+    } else {
+      heading.textContent = 'New Weekly Check-In';
+      $('#checkin-q1').value = '';
+      $('#checkin-q2').value = '';
+      $('#checkin-q3').value = '';
+      $('#checkin-q4').value = '';
+      checkinRating = 0;
+    }
+
+    renderCheckinStars();
+
+    todayDashboard.classList.add('hidden');
+    detailEmpty.classList.add('hidden');
+    viewEntry.classList.add('hidden');
+    writeEntry.classList.add('hidden');
+    checkinDetailView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
+    checkinFormView.classList.remove('hidden');
+
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    $('#checkin-q1').focus();
+  }
+
+  function renderCheckinStars() {
+    $$('#checkin-stars .star-btn').forEach(b => {
+      const star = parseInt(b.dataset.star);
+      b.textContent = star <= checkinRating ? '★' : '☆';
+      b.classList.toggle('filled', star <= checkinRating);
+    });
+  }
+
+  function saveCheckin() {
+    const q1 = $('#checkin-q1').value.trim();
+    const q2 = $('#checkin-q2').value.trim();
+    const q3 = $('#checkin-q3').value.trim();
+    const q4 = $('#checkin-q4').value.trim();
+
+    if (!q1 || !q2 || !q3 || !q4) { $('#checkin-error').classList.remove('hidden'); return; }
+    if (!checkinRating) { $('#checkin-star-error').classList.remove('hidden'); return; }
+    $('#checkin-error').classList.add('hidden');
+    $('#checkin-star-error').classList.add('hidden');
+
+    if (editingCheckinId) {
+      const r = reflections.find(x => x.id === editingCheckinId);
+      if (r) { r.wentWell = q1; r.didntGoWell = q2; r.learned = q3; r.differently = q4; r.rating = checkinRating; }
+      saveReflections();
+      showCheckinDetail(editingCheckinId);
+    } else {
+      const newCheckin = { id: uid(), wentWell: q1, didntGoWell: q2, learned: q3, differently: q4, rating: checkinRating, date: new Date().toISOString() };
+      reflections.push(newCheckin);
+      saveReflections();
+      showCheckinDetail(newCheckin.id);
+    }
+    showToast(editingCheckinId ? 'Check-in updated' : 'Check-in saved');
+  }
+
+  // ── Life Score ──
+
+  function renderLifeScoreView() {
+    const chartArea = $('#lifescore-chart-area');
+    const barsArea = $('#lifescore-bars-area');
+    const historyArea = $('#lifescore-history-area');
+
+    if (lifeScores.length === 0) {
+      chartArea.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No assessments yet. Rate your life areas to see your balance chart.</p></div>';
+      barsArea.innerHTML = '';
+      historyArea.innerHTML = '';
+      return;
+    }
+
+    const latest = [...lifeScores].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    renderRadarChart(chartArea, latest.scores, latest.date);
+    renderScoreBars(barsArea, latest.scores);
+    renderLifeScoreHistory(historyArea, latest.id);
+  }
+
+  function renderRadarChart(container, scores, dateStr) {
+    const d = new Date(dateStr);
+    const dateLabel = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const cx = 150, cy = 140, r = 110;
+    const n = 6;
+
+    function getPoint(index, value, maxR) {
+      const angle = (Math.PI * 2 * index / n) - Math.PI / 2;
+      const dist = (value / 10) * maxR;
+      return { x: cx + dist * Math.cos(angle), y: cy + dist * Math.sin(angle) };
+    }
+
+    let gridLines = '';
+    [3.3, 6.6, 10].forEach(level => {
+      let points = [];
+      for (let i = 0; i < n; i++) { const p = getPoint(i, level, r); points.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`); }
+      gridLines += `<polygon points="${points.join(' ')}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
+    });
+
+    let axisLines = '';
+    for (let i = 0; i < n; i++) {
+      const p = getPoint(i, 10, r);
+      axisLines += `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
+    }
+
+    const values = LIFE_AREAS.map(a => scores[a.key] || 1);
+    let dataPoints = [];
+    for (let i = 0; i < n; i++) { const p = getPoint(i, values[i], r); dataPoints.push(`${p.x.toFixed(1)},${p.y.toFixed(1)}`); }
+
+    let dots = '';
+    for (let i = 0; i < n; i++) { const p = getPoint(i, values[i], r); dots += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="var(--accent)"/>`; }
+
+    const labelNames = ['Health', 'School', 'Relat.', 'Finances', 'Growth', 'Happiness'];
+    let labelEls = '';
+    for (let i = 0; i < n; i++) {
+      const p = getPoint(i, 12.5, r);
+      let anchor = 'middle';
+      if (p.x < cx - 20) anchor = 'end';
+      else if (p.x > cx + 20) anchor = 'start';
+      labelEls += `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" fill="var(--text-secondary)" font-size="11" font-weight="500" font-family="var(--font-body)">${labelNames[i]}</text>`;
+    }
+
+    container.innerHTML = `
+      <h3 class="lifescore-chart-title">Life Balance</h3>
+      <p class="lifescore-chart-date">${dateLabel}</p>
+      <div class="lifescore-chart-wrap">
+        <svg viewBox="0 0 300 280" class="lifescore-svg">
+          ${gridLines}${axisLines}
+          <polygon points="${dataPoints.join(' ')}" fill="rgba(91,140,106,0.15)" stroke="var(--accent)" stroke-width="2"/>
+          ${dots}${labelEls}
+        </svg>
+      </div>`;
+  }
+
+  function renderScoreBars(container, scores) {
+    container.innerHTML = `<h3 class="lifescore-section-heading" style="margin-top:16px">Scores</h3>` +
+      LIFE_AREAS.map(a => {
+        const val = scores[a.key] || 1;
+        const colorClass = val <= 3 ? 'red' : val <= 6 ? 'amber' : 'green';
+        return `<div class="lifescore-bar-row">
+          <span class="lifescore-bar-label">${a.emoji} ${a.label}</span>
+          <div class="lifescore-bar-track"><div class="lifescore-bar-fill ${colorClass}" style="width:${val * 10}%"></div></div>
+          <span class="lifescore-bar-value">${val}</span>
+        </div>`;
+      }).join('');
+  }
+
+  function renderLifeScoreHistory(container, activeId) {
+    const sorted = [...lifeScores].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (sorted.length <= 1) { container.innerHTML = ''; return; }
+    container.innerHTML = '<h3 class="lifescore-section-heading" style="margin-top:16px">History</h3>' + sorted.map(s => {
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const vals = LIFE_AREAS.map(a => s.scores[a.key] || 1);
+      const avg = (vals.reduce((sum, v) => sum + v, 0) / vals.length).toFixed(1);
+      return `<div class="entry-card lifescore-history-card${s.id === activeId ? ' active' : ''}" data-lsid="${s.id}">
+        <div class="card-top"><span class="card-date">${dateStr}</span><span class="lifescore-avg">Avg: ${avg}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  function loadLifeScoreIntoChart(id) {
+    const score = lifeScores.find(s => s.id === id);
+    if (!score) return;
+    renderRadarChart($('#lifescore-chart-area'), score.scores, score.date);
+    renderScoreBars($('#lifescore-bars-area'), score.scores);
+    renderLifeScoreHistory($('#lifescore-history-area'), id);
+  }
+
+  function showLifeScoreForm() {
+    $('#lifescore-form-heading').textContent = 'New Assessment';
+    LIFE_AREAS.forEach(a => {
+      const slider = $(`.lifescore-slider[data-area="${a.key}"]`);
+      if (slider) { slider.value = 5; slider.nextElementSibling.textContent = '5'; }
+    });
+
+    todayDashboard.classList.add('hidden');
+    detailEmpty.classList.add('hidden');
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lessonsEditView.classList.add('hidden');
+    lifescoreFormView.classList.remove('hidden');
+
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+  }
+
+  function saveLifeScore() {
+    const scores = {};
+    LIFE_AREAS.forEach(a => {
+      const slider = $(`.lifescore-slider[data-area="${a.key}"]`);
+      scores[a.key] = slider ? parseInt(slider.value) : 5;
+    });
+    lifeScores.push({ id: uid(), scores, date: new Date().toISOString() });
+    saveLifeScores();
+    showReflectHome();
+    showToast('Assessment saved');
+  }
+
+  // ── Mood Insights ──
+
+  function renderMoodInsights() {
+    const container = $('#mood-insights-content');
+    $$('#mood-period-filter .reflect-pill').forEach(b => {
+      const val = b.dataset.period === 'all' ? 'all' : parseInt(b.dataset.period);
+      b.classList.toggle('active', val === moodPeriod || String(val) === String(moodPeriod));
+    });
+
+    const now = new Date();
+    let filtered;
+    if (moodPeriod === 'all') {
+      filtered = [...entries];
+    } else {
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - parseInt(moodPeriod));
+      filtered = entries.filter(e => new Date(e.date) >= cutoff);
+    }
+
+    if (filtered.length < 3) {
+      container.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">🔍</div><p>Write more journal entries to see mood patterns here.</p></div>';
+      return;
+    }
+
+    const moodCounts = {};
+    filtered.forEach(e => { if (e.mood) moodCounts[e.mood] = (moodCounts[e.mood] || 0) + 1; });
+    const sortedMoods = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
+    const maxCount = sortedMoods.length ? sortedMoods[0][1] : 1;
+    const topMood = sortedMoods[0];
+    const topMoodLabel = MOOD_LABELS[topMood[0]] || topMood[0];
+
+    const barsHtml = sortedMoods.map(([mood, count]) => {
+      const pct = Math.round(count / maxCount * 100);
+      return `<div class="mood-dist-row">
+        <span class="mood-dist-emoji">${mood}</span>
+        <div class="mood-dist-bar-track"><div class="mood-dist-bar-fill" style="width:${pct}%"></div></div>
+        <span class="mood-dist-count">${count}</span>
+      </div>`;
+    }).join('');
+
+    const days = moodPeriod === 'all' ? 30 : parseInt(moodPeriod);
+    let timelineHtml = '';
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const dayEntries = entries.filter(e => {
+        const ed = new Date(e.date);
+        return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
+      });
+      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (dayEntries.length > 0 && dayEntries[0].mood) {
+        timelineHtml += `<span class="mood-timeline-dot has-mood" title="${dateLabel}">${dayEntries[0].mood}</span>`;
+      } else {
+        timelineHtml += `<span class="mood-timeline-dot empty" title="${dateLabel}"></span>`;
+      }
+    }
+
+    container.innerHTML = `
+      <div class="mood-most-common">
+        <span class="mood-most-emoji">${topMood[0]}</span>
+        <div class="mood-most-info">
+          <span class="mood-most-label">Most Common Mood</span>
+          <span class="mood-most-name">${topMoodLabel.replace('Feeling ', '')} — ${topMood[1]} time${topMood[1] > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <h4 class="mood-insight-heading">Mood Distribution</h4>
+      <div class="mood-dist-chart">${barsHtml}</div>
+      <h4 class="mood-insight-heading">Mood Timeline</h4>
+      <div class="mood-timeline">${timelineHtml}</div>`;
+  }
+
+  // ── Lessons ──
+
+  function getFilteredLessons() {
+    let list = [...lessons].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (lessonSearchQuery) {
+      const q = lessonSearchQuery.toLowerCase();
+      list = list.filter(l => l.text.toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  function renderLessonsList() {
+    const list = $('#lessons-list');
+    const filtered = getFilteredLessons();
+    if (filtered.length === 0) {
+      const msg = lessonSearchQuery ? 'No lessons match your search.' : 'No lessons yet. What have you learned recently?';
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">💡</div><p>${msg}</p></div>`;
+      return;
+    }
+    list.innerHTML = filtered.map(l => {
+      const d = new Date(l.date);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `<div class="entry-card lesson-card${l.id === currentLessonId ? ' active' : ''}" data-lid="${l.id}">
+        <div class="card-top"><span class="card-date">${dateStr}</span></div>
+        <div class="card-title">${escapeHtml(l.text)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function showLessonDetail(id) {
+    const l = lessons.find(x => x.id === id);
+    if (!l) return;
+    currentLessonId = id;
+    editingLessonId = id;
+    $('#lesson-edit-text').value = l.text;
+    const d = new Date(l.date);
+    $('#lesson-edit-date').textContent = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    todayDashboard.classList.add('hidden');
+    detailEmpty.classList.add('hidden');
+    checkinDetailView.classList.add('hidden');
+    checkinFormView.classList.add('hidden');
+    lifescoreFormView.classList.add('hidden');
+    lessonsEditView.classList.remove('hidden');
+
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    renderLessonsList();
+  }
+
+  function saveLessonEdit() {
+    if (!editingLessonId) return;
+    const text = $('#lesson-edit-text').value.trim();
+    if (!text) return;
+    const l = lessons.find(x => x.id === editingLessonId);
+    if (l) l.text = text;
+    saveLessons();
+    showReflectHome();
+    showToast('Lesson updated');
+  }
+
+  function addQuickLesson() {
+    const input = $('#lesson-quick-input');
+    const text = input.value.trim();
+    if (!text) return;
+    lessons.push({ id: uid(), text, date: new Date().toISOString() });
+    saveLessons();
+    input.value = '';
+    renderLessonsList();
+    showToast('Lesson saved');
+  }
+
+  // ── Dashboard Reflection ──
+
+  function renderDashboardReflection() {
+    const container = $('#today-reflection-content');
+    if (!container) return;
+    let html = '';
+
+    if (reflections.length === 0) {
+      html += '<div class="today-reflection-nudge"><span class="nudge-icon">📝</span><span class="nudge-text">Start your first weekly reflection to track your progress.</span></div>';
+    } else {
+      const latest = [...reflections].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      const daysSince = Math.floor((new Date() - new Date(latest.date)) / 86400000);
+      if (daysSince > 7) {
+        html += `<div class="today-reflection-nudge"><span class="nudge-icon">📝</span><span class="nudge-text">Time for your weekly reflection — it's been ${daysSince} days.</span></div>`;
+      }
+    }
+
+    if (lifeScores.length > 0) {
+      const latest = [...lifeScores].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      html += '<div class="today-lifescores-row">';
+      LIFE_AREAS.forEach(a => {
+        const val = latest.scores[a.key] || 0;
+        html += `<span class="today-lifescore-item">${a.emoji} ${val}</span>`;
+      });
+      html += '</div>';
+    }
+
+    if (!html) html = '<p class="today-reminders-empty">No reflection data yet.</p>';
+    container.innerHTML = html;
+  }
+
+  // ══════════════════════════════════════
   //  EVENT HANDLERS
   // ══════════════════════════════════════
 
@@ -1883,6 +2447,131 @@
     $('#goal-manual-pct').textContent = e.target.value + '%';
   });
 
+  // ── Reflect Event Handlers ──
+
+  // Journal mode toggle
+  document.querySelector('.journal-mode-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.mode-toggle-btn');
+    if (btn) switchJournalMode(btn.dataset.jmode);
+  });
+
+  // Reflect sub-nav
+  $('#reflect-subnav').addEventListener('click', e => {
+    const btn = e.target.closest('.reflect-pill');
+    if (btn && btn.dataset.rsection) switchReflectSection(btn.dataset.rsection);
+  });
+
+  // Check-in list click
+  $('#checkin-list').addEventListener('click', e => {
+    const card = e.target.closest('.checkin-card');
+    if (card) showCheckinDetail(card.dataset.cid);
+  });
+
+  // New check-in
+  $('#btn-new-checkin').addEventListener('click', () => showCheckinForm());
+
+  // Check-in detail: edit/delete
+  $('#btn-checkin-edit').addEventListener('click', () => { if (currentCheckinId) showCheckinForm(currentCheckinId); });
+  $('#btn-checkin-edit-bottom').addEventListener('click', () => { if (currentCheckinId) showCheckinForm(currentCheckinId); });
+  $('#btn-checkin-delete').addEventListener('click', () => {
+    if (!currentCheckinId) return;
+    deleteMode = 'checkin';
+    modalText.textContent = 'Delete this check-in?';
+    modalConfirm.textContent = 'Delete';
+    deleteModal.classList.remove('hidden');
+  });
+  $('#btn-checkin-delete-bottom').addEventListener('click', () => {
+    if (!currentCheckinId) return;
+    deleteMode = 'checkin';
+    modalText.textContent = 'Delete this check-in?';
+    modalConfirm.textContent = 'Delete';
+    deleteModal.classList.remove('hidden');
+  });
+
+  // Check-in form: star rating
+  $('#checkin-stars').addEventListener('click', e => {
+    const btn = e.target.closest('.star-btn');
+    if (!btn) return;
+    checkinRating = parseInt(btn.dataset.star);
+    renderCheckinStars();
+    $('#checkin-star-error').classList.add('hidden');
+  });
+
+  // Check-in form: save/cancel
+  $('#btn-checkin-save-top').addEventListener('click', saveCheckin);
+  $('#btn-checkin-save-bottom').addEventListener('click', saveCheckin);
+  $('#btn-checkin-cancel').addEventListener('click', showReflectHome);
+
+  // Life Score: new assessment buttons
+  $('#btn-new-assessment').addEventListener('click', showLifeScoreForm);
+
+  // Life Score: history card clicks
+  $('#lifescore-history-area').addEventListener('click', e => {
+    const card = e.target.closest('.lifescore-history-card');
+    if (card) loadLifeScoreIntoChart(card.dataset.lsid);
+  });
+
+  // Life Score: delete history item
+  $('#lifescore-history-area').addEventListener('contextmenu', e => { e.preventDefault(); });
+
+  // Life Score form: slider values
+  document.querySelectorAll('.lifescore-slider').forEach(slider => {
+    slider.addEventListener('input', e => {
+      e.target.nextElementSibling.textContent = e.target.value;
+    });
+  });
+
+  // Life Score form: save/cancel
+  $('#btn-lifescore-save-top').addEventListener('click', saveLifeScore);
+  $('#btn-lifescore-save-bottom').addEventListener('click', saveLifeScore);
+  $('#btn-lifescore-cancel').addEventListener('click', showReflectHome);
+
+  // Mood: period filter
+  $('#mood-period-filter').addEventListener('click', e => {
+    const btn = e.target.closest('.reflect-pill');
+    if (!btn || !btn.dataset.period) return;
+    moodPeriod = btn.dataset.period === 'all' ? 'all' : parseInt(btn.dataset.period);
+    renderMoodInsights();
+  });
+
+  // Lessons: quick add
+  $('#btn-add-lesson').addEventListener('click', addQuickLesson);
+  $('#lesson-quick-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addQuickLesson(); }
+  });
+
+  // Lessons: search
+  $('#lesson-search-input').addEventListener('input', e => {
+    lessonSearchQuery = e.target.value.trim();
+    $('#lesson-search-clear').classList.toggle('hidden', !lessonSearchQuery);
+    renderLessonsList();
+  });
+
+  $('#lesson-search-clear').addEventListener('click', () => {
+    $('#lesson-search-input').value = '';
+    lessonSearchQuery = '';
+    $('#lesson-search-clear').classList.add('hidden');
+    renderLessonsList();
+  });
+
+  // Lessons: card click
+  $('#lessons-list').addEventListener('click', e => {
+    const card = e.target.closest('.lesson-card');
+    if (card) showLessonDetail(card.dataset.lid);
+  });
+
+  // Lesson edit: save/cancel/delete
+  $('#btn-lesson-save-top').addEventListener('click', saveLessonEdit);
+  $('#btn-lesson-save-bottom').addEventListener('click', saveLessonEdit);
+  $('#btn-lesson-cancel').addEventListener('click', showReflectHome);
+  $('#btn-lesson-delete-top').addEventListener('click', () => {
+    if (!editingLessonId) return;
+    deleteMode = 'lesson';
+    modalText.textContent = 'Delete this lesson?';
+    modalConfirm.textContent = 'Delete';
+    deleteModal.classList.remove('hidden');
+  });
+
   // Dashboard: View all goals
   $('#btn-view-all-goals').addEventListener('click', () => switchFeature('goals'));
 
@@ -2028,6 +2717,19 @@
       currentGoalId = null;
       showGoalsHome();
       showToast('Goal deleted');
+    } else if (deleteMode === 'checkin') {
+      reflections = reflections.filter(r => r.id !== currentCheckinId);
+      saveReflections(); deleteModal.classList.add('hidden'); deleteMode = 'single';
+      currentCheckinId = null;
+      showReflectHome();
+      showToast('Check-in deleted');
+    } else if (deleteMode === 'lesson') {
+      lessons = lessons.filter(l => l.id !== editingLessonId);
+      saveLessons(); deleteModal.classList.add('hidden'); deleteMode = 'single';
+      editingLessonId = null;
+      currentLessonId = null;
+      showReflectHome();
+      showToast('Lesson deleted');
     }
   });
 
@@ -2047,6 +2749,7 @@
       else if (t === 'today-home') showTodayHome();
       else if (t === 'manage-habits') showManageHabits();
       else if (t === 'goals-home') showGoalsHome();
+      else if (t === 'reflect-home') showReflectHome();
       else showJournalHome();
     });
   });
@@ -2252,6 +2955,9 @@
   loadStickies();
   loadGoals();
   loadGoalFilter();
+  loadReflections();
+  loadLifeScores();
+  loadLessons();
   renderStreak();
   switchFeature('today');
 })();

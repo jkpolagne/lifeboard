@@ -99,6 +99,12 @@
 
       <!-- JOURNAL SIDEBAR -->
       <div id="journal-sidebar" class="feature-sidebar hidden">
+        <div class="journal-mode-toggle">
+          <button class="mode-toggle-btn active" data-jmode="entries">Entries</button>
+          <button class="mode-toggle-btn" data-jmode="reflect">Reflect</button>
+        </div>
+
+        <div id="journal-entries-content" class="journal-tab-content">
         <div class="filter-bar">
           <button class="filter-btn active" data-filter="all">All</button>
           <button class="filter-btn" data-filter="pinned">⭐ Pinned</button>
@@ -138,6 +144,57 @@
 
         <div class="new-entry-bar">
           <button id="btn-new-entry" class="btn btn-primary btn-new-entry">+ New Entry</button>
+        </div>
+        </div>
+
+        <div id="journal-reflect-content" class="journal-tab-content hidden">
+          <div class="reflect-subnav" id="reflect-subnav">
+            <button class="reflect-pill active" data-rsection="checkin">Check-In</button>
+            <button class="reflect-pill" data-rsection="lifescore">Life Score</button>
+            <button class="reflect-pill" data-rsection="mood">Mood</button>
+            <button class="reflect-pill" data-rsection="lessons">Lessons</button>
+          </div>
+
+          <div id="reflect-checkin-sidebar" class="reflect-section-sidebar">
+            <div id="checkin-list" class="entries-list"></div>
+            <div class="new-entry-bar">
+              <button id="btn-new-checkin" class="btn btn-primary btn-new-entry">+ New Weekly Check-In</button>
+            </div>
+          </div>
+
+          <div id="reflect-lifescore-sidebar" class="reflect-section-sidebar hidden">
+            <div class="reflect-section-scroll">
+              <div id="lifescore-chart-area"></div>
+              <div id="lifescore-bars-area"></div>
+              <div id="lifescore-history-area"></div>
+            </div>
+            <div class="new-entry-bar">
+              <button id="btn-new-assessment" class="btn btn-primary btn-new-entry">+ New Assessment</button>
+            </div>
+          </div>
+
+          <div id="reflect-mood-sidebar" class="reflect-section-sidebar hidden">
+            <div class="reflect-section-scroll">
+              <div class="mood-period-filter" id="mood-period-filter">
+                <button class="reflect-pill active" data-period="7">Last 7 days</button>
+                <button class="reflect-pill" data-period="30">Last 30 days</button>
+                <button class="reflect-pill" data-period="all">All time</button>
+              </div>
+              <div id="mood-insights-content"></div>
+            </div>
+          </div>
+
+          <div id="reflect-lessons-sidebar" class="reflect-section-sidebar hidden">
+            <div class="lessons-quick-add">
+              <input type="text" id="lesson-quick-input" class="search-input" placeholder="What did you learn or realize?">
+              <button id="btn-add-lesson" class="todo-fab-btn" title="Add lesson" aria-label="Add lesson">+</button>
+            </div>
+            <div class="search-wrapper">
+              <input type="text" id="lesson-search-input" class="search-input" placeholder="Search lessons...">
+              <button id="lesson-search-clear" class="search-clear hidden" aria-label="Clear search">✕</button>
+            </div>
+            <div id="lessons-list" class="entries-list"></div>
+          </div>
         </div>
       </div>
 
@@ -249,6 +306,11 @@
             <button id="btn-view-all-goals" class="today-manage-link">View all</button>
           </div>
           <div id="today-goals-overview" class="today-goals-overview"></div>
+        </div>
+
+        <div class="today-section" id="today-reflection-section">
+          <h3 class="today-section-title">Self-Reflection</h3>
+          <div id="today-reflection-content"></div>
         </div>
 
         <div class="today-section">
@@ -432,6 +494,133 @@
         <div class="todo-form-actions-bottom">
           <button id="btn-goal-cancel" class="btn btn-secondary">Cancel</button>
           <button id="btn-goal-save-bottom" class="btn btn-primary">Save Goal</button>
+        </div>
+      </div>
+
+      <!-- Reflect: Check-In Detail -->
+      <div id="checkin-detail-view" class="detail-view hidden">
+        <button class="back-btn" data-target="reflect-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading">Weekly Check-In</h2>
+          <div class="checkin-detail-actions">
+            <button id="btn-checkin-edit" class="btn btn-edit-green">✏️ Edit</button>
+            <button id="btn-checkin-delete" class="btn btn-delete-icon" aria-label="Delete">🗑️</button>
+          </div>
+        </div>
+        <div class="checkin-detail-date" id="checkin-detail-date"></div>
+        <div class="checkin-detail-stars-row" id="checkin-detail-stars"></div>
+        <div class="checkin-detail-section">
+          <h4 class="checkin-label green">WHAT WENT WELL THIS WEEK?</h4>
+          <div class="checkin-answer-box green" id="checkin-a1"></div>
+        </div>
+        <div class="checkin-detail-section">
+          <h4 class="checkin-label red">WHAT DIDN'T GO WELL?</h4>
+          <div class="checkin-answer-box red" id="checkin-a2"></div>
+        </div>
+        <div class="checkin-detail-section">
+          <h4 class="checkin-label amber">WHAT DID I LEARN?</h4>
+          <div class="checkin-answer-box amber" id="checkin-a3"></div>
+        </div>
+        <div class="checkin-detail-section">
+          <h4 class="checkin-label blue">WHAT WILL I DO DIFFERENTLY NEXT WEEK?</h4>
+          <div class="checkin-answer-box blue" id="checkin-a4"></div>
+        </div>
+        <div class="checkin-bottom-actions">
+          <button id="btn-checkin-edit-bottom" class="btn btn-primary">✏️ Edit</button>
+          <button id="btn-checkin-delete-bottom" class="btn btn-delete-icon" aria-label="Delete">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Reflect: Check-In Form -->
+      <div id="checkin-form-view" class="detail-view hidden">
+        <button class="back-btn" data-target="reflect-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="checkin-form-heading">New Weekly Check-In</h2>
+          <div class="todo-top-actions">
+            <button id="btn-checkin-save-top" class="btn btn-primary btn-save-top">Save</button>
+          </div>
+        </div>
+        <label class="field-label checkin-label-green">What went well this week? <span class="required">*</span></label>
+        <textarea id="checkin-q1" class="textarea checkin-textarea" placeholder="Share your wins..."></textarea>
+        <label class="field-label checkin-label-red">What didn't go well? <span class="required">*</span></label>
+        <textarea id="checkin-q2" class="textarea checkin-textarea" placeholder="What could have been better..."></textarea>
+        <label class="field-label checkin-label-amber">What did I learn? <span class="required">*</span></label>
+        <textarea id="checkin-q3" class="textarea checkin-textarea" placeholder="Key takeaways..."></textarea>
+        <label class="field-label checkin-label-blue">What will I do differently next week? <span class="required">*</span></label>
+        <textarea id="checkin-q4" class="textarea checkin-textarea" placeholder="Action items..."></textarea>
+        <p id="checkin-error" class="error-msg hidden">All four fields are required</p>
+        <label class="field-label">Rate your week <span class="required">*</span></label>
+        <div class="star-rating" id="checkin-stars">
+          <button class="star-btn" data-star="1">☆</button>
+          <button class="star-btn" data-star="2">☆</button>
+          <button class="star-btn" data-star="3">☆</button>
+          <button class="star-btn" data-star="4">☆</button>
+          <button class="star-btn" data-star="5">☆</button>
+        </div>
+        <p id="checkin-star-error" class="error-msg hidden">Please rate your week</p>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-checkin-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-checkin-save-bottom" class="btn btn-primary">Save Check-In</button>
+        </div>
+      </div>
+
+      <!-- Reflect: Life Score Form -->
+      <div id="lifescore-form-view" class="detail-view hidden">
+        <button class="back-btn" data-target="reflect-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="lifescore-form-heading">New Assessment</h2>
+          <div class="todo-top-actions">
+            <button id="btn-lifescore-save-top" class="btn btn-primary btn-save-top">Save</button>
+          </div>
+        </div>
+        <p class="lifescore-form-hint">Rate each life area from 1 to 10</p>
+        <div class="lifescore-sliders">
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">🏋️ Health & Fitness</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="health" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">📚 School / Career</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="school" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">❤️ Relationships</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="relationships" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">💰 Finances / Crypto</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="finances" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">🌱 Personal Growth</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="growth" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+          <div class="lifescore-slider-group">
+            <label class="lifescore-area-label">😊 Happiness</label>
+            <div class="goal-slider-row"><input type="range" class="goal-slider lifescore-slider" data-area="happiness" min="1" max="10" value="5"><span class="lifescore-slider-val">5</span></div>
+          </div>
+        </div>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-lifescore-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-lifescore-save-bottom" class="btn btn-primary">Save Assessment</button>
+        </div>
+      </div>
+
+      <!-- Reflect: Lesson Edit -->
+      <div id="lessons-edit-view" class="detail-view hidden">
+        <button class="back-btn" data-target="reflect-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading">Edit Lesson</h2>
+          <div class="todo-top-actions">
+            <button id="btn-lesson-save-top" class="btn btn-primary btn-save-top">Save</button>
+            <button id="btn-lesson-delete-top" class="btn btn-delete-icon" aria-label="Delete lesson">🗑️</button>
+          </div>
+        </div>
+        <div class="lesson-edit-date" id="lesson-edit-date"></div>
+        <textarea id="lesson-edit-text" class="textarea" placeholder="What did you learn or realize?"></textarea>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-lesson-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-lesson-save-bottom" class="btn btn-primary">Save Lesson</button>
         </div>
       </div>
 
