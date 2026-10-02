@@ -15,7 +15,10 @@
     <nav id="nav-rail">
       <div class="nav-rail-top">
         <div class="nav-rail-brand">LB</div>
-        <button class="nav-rail-item active" data-feature="journal" data-tooltip="Journal">
+        <button class="nav-rail-item active" data-feature="today" data-tooltip="Today">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </button>
+        <button class="nav-rail-item" data-feature="journal" data-tooltip="Journal">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </button>
         <button class="nav-rail-item" data-feature="todo" data-tooltip="Todo">
@@ -31,8 +34,37 @@
 
     <aside id="sidebar" class="screen active">
 
+      <!-- Today header -->
+      <header id="today-header" class="sidebar-header">
+        <div class="title-group">
+          <h1 class="logo">LifeBoard</h1>
+          <p class="subtitle">Today</p>
+        </div>
+        <div class="header-actions">
+          <div id="streak-today" class="streak">🔥 0-day streak</div>
+        </div>
+      </header>
+
+      <!-- TODAY SIDEBAR -->
+      <div id="today-sidebar" class="feature-sidebar">
+        <div class="today-habits-header">
+          <h3 class="today-section-title">Today's Habits</h3>
+          <button id="btn-manage-habits" class="today-manage-link">Manage</button>
+        </div>
+        <div class="today-habit-progress">
+          <div class="progress-row">
+            <span id="today-habit-progress-text" class="progress-text">0 of 0 done</span>
+            <span id="today-habit-progress-pct" class="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="today-habit-progress-fill" class="progress-bar-fill" style="width:0%"></div>
+          </div>
+        </div>
+        <div id="today-habits-list" class="today-habits-list entries-list"></div>
+      </div>
+
       <!-- Journal header -->
-      <header id="journal-header" class="sidebar-header">
+      <header id="journal-header" class="sidebar-header hidden">
         <div class="title-group">
           <h1 class="logo">LifeBoard</h1>
           <p class="subtitle">My Journal</p>
@@ -63,7 +95,7 @@
       </header>
 
       <!-- JOURNAL SIDEBAR -->
-      <div id="journal-sidebar" class="feature-sidebar">
+      <div id="journal-sidebar" class="feature-sidebar hidden">
         <div class="filter-bar">
           <button class="filter-btn active" data-filter="all">All</button>
           <button class="filter-btn" data-filter="pinned">⭐ Pinned</button>
@@ -140,8 +172,119 @@
 
     <!-- DETAIL PANEL -->
     <main id="detail-panel" class="screen">
-      <div id="detail-empty" class="detail-empty"><p>Select an entry or start writing</p></div>
+      <div id="detail-empty" class="detail-empty hidden"><p>Select an entry or start writing</p></div>
       <div id="todo-detail-empty" class="detail-empty hidden"><p>Select a task or create one</p></div>
+
+      <!-- Today: Dashboard -->
+      <div id="today-dashboard" class="detail-view today-dashboard">
+        <div class="today-date" id="today-date"></div>
+        <h1 class="today-greeting" id="today-greeting">Good evening, Jann</h1>
+
+        <div class="today-stats-row">
+          <div class="today-streak-card">
+            <span class="today-streak-icon">🔥</span>
+            <div class="today-streak-info">
+              <span id="today-streak-text" class="today-streak-label">0-day journal streak</span>
+              <span id="today-streak-nudge" class="today-streak-nudge">Write today to keep it going!</span>
+            </div>
+          </div>
+          <div class="today-habits-summary" id="today-habits-summary">
+            <span class="today-habits-count" id="today-habits-count">0/0</span>
+            <span class="today-habits-done-label">habits done</span>
+          </div>
+        </div>
+
+        <div class="today-section">
+          <div class="today-section-header">
+            <h3 class="today-section-title">Reminders</h3>
+            <button id="btn-add-sticky" class="today-add-btn" title="Add reminder">+</button>
+          </div>
+          <div id="today-reminders" class="today-reminders"></div>
+        </div>
+
+        <div class="today-section">
+          <h3 class="today-section-title">Pending Tasks</h3>
+          <div class="today-task-stats" id="today-task-stats"></div>
+          <div id="today-pending-tasks" class="today-pending-tasks"></div>
+        </div>
+      </div>
+
+      <!-- Today: Manage Habits -->
+      <div id="manage-habits-view" class="detail-view hidden">
+        <button class="back-btn" data-target="today-home">← Back</button>
+        <h2 class="write-heading">Manage Habits</h2>
+        <div id="manage-habits-list" class="manage-habits-list"></div>
+        <button id="btn-add-habit" class="btn btn-primary btn-new-entry" style="margin-top:16px">+ Add New Habit</button>
+      </div>
+
+      <!-- Today: Add/Edit Habit Form -->
+      <div id="habit-form-view" class="detail-view hidden">
+        <button class="back-btn" data-target="manage-habits">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="habit-form-heading">New Habit</h2>
+          <button id="btn-habit-save-top" class="btn btn-primary btn-save-top">Save</button>
+        </div>
+        <label for="habit-name" class="field-label">Habit name <span class="required">*</span></label>
+        <input type="text" id="habit-name" class="input" placeholder="e.g. Read 15 minutes">
+        <p id="habit-name-error" class="error-msg hidden">Habit name is required</p>
+        <label class="field-label">Emoji</label>
+        <div class="habit-emoji-picker" id="habit-emoji-picker">
+          <button class="habit-emoji-btn selected" data-emoji="📖">📖</button>
+          <button class="habit-emoji-btn" data-emoji="💧">💧</button>
+          <button class="habit-emoji-btn" data-emoji="🏃">🏃</button>
+          <button class="habit-emoji-btn" data-emoji="📊">📊</button>
+          <button class="habit-emoji-btn" data-emoji="📝">📝</button>
+          <button class="habit-emoji-btn" data-emoji="💪">💪</button>
+          <button class="habit-emoji-btn" data-emoji="🧘">🧘</button>
+          <button class="habit-emoji-btn" data-emoji="🎯">🎯</button>
+        </div>
+        <label for="habit-custom-emoji" class="field-label">Or type your own</label>
+        <input type="text" id="habit-custom-emoji" class="input" placeholder="Type any emoji" maxlength="2" style="width:100px;">
+        <label class="field-label">Frequency</label>
+        <div class="habit-freq-picker" id="habit-freq-picker">
+          <button class="priority-btn selected" data-freq="daily">Every day</button>
+          <button class="priority-btn" data-freq="weekdays">Weekdays</button>
+          <button class="priority-btn" data-freq="custom">Specific days</button>
+        </div>
+        <div id="habit-custom-days" class="habit-custom-days hidden">
+          <label class="habit-day-check"><input type="checkbox" value="0"> Sun</label>
+          <label class="habit-day-check"><input type="checkbox" value="1" checked> Mon</label>
+          <label class="habit-day-check"><input type="checkbox" value="2" checked> Tue</label>
+          <label class="habit-day-check"><input type="checkbox" value="3" checked> Wed</label>
+          <label class="habit-day-check"><input type="checkbox" value="4" checked> Thu</label>
+          <label class="habit-day-check"><input type="checkbox" value="5" checked> Fri</label>
+          <label class="habit-day-check"><input type="checkbox" value="6"> Sat</label>
+        </div>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-habit-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-habit-save-bottom" class="btn btn-primary">Save Habit</button>
+        </div>
+      </div>
+
+      <!-- Today: Add/Edit Sticky Reminder -->
+      <div id="sticky-form-view" class="detail-view hidden">
+        <button class="back-btn" data-target="today-home">← Back</button>
+        <div class="write-top-row">
+          <h2 class="write-heading" id="sticky-form-heading">New Reminder</h2>
+          <div class="todo-top-actions">
+            <button id="btn-sticky-save-top" class="btn btn-primary btn-save-top">Save</button>
+            <button id="btn-sticky-delete-top" class="btn btn-delete-icon hidden" aria-label="Delete reminder">🗑️</button>
+          </div>
+        </div>
+        <label for="sticky-text" class="field-label">Reminder text <span class="required">*</span></label>
+        <input type="text" id="sticky-text" class="input" placeholder="Stay consistent. Small steps compound.">
+        <p id="sticky-text-error" class="error-msg hidden">Text is required</p>
+        <label class="field-label">Color</label>
+        <div class="sticky-color-picker">
+          <button class="sticky-color-btn selected" data-color="green" style="border-left:4px solid #5B8C6A">Green</button>
+          <button class="sticky-color-btn" data-color="amber" style="border-left:4px solid #D4943A">Amber</button>
+          <button class="sticky-color-btn" data-color="red" style="border-left:4px solid #C45B4A">Red</button>
+        </div>
+        <div class="todo-form-actions-bottom">
+          <button id="btn-sticky-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-sticky-save-bottom" class="btn btn-primary">Save</button>
+        </div>
+      </div>
 
       <!-- Journal: View -->
       <div id="view-entry" class="detail-view hidden">
@@ -233,7 +376,11 @@
 
   <!-- BOTTOM NAV (mobile) -->
   <nav id="bottom-nav" class="bottom-nav">
-    <button class="bottom-nav-item active" data-feature="journal">
+    <button class="bottom-nav-item active" data-feature="today">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Today</span>
+    </button>
+    <button class="bottom-nav-item" data-feature="journal">
       <span class="nav-icon">📖</span>
       <span class="nav-label">Journal</span>
     </button>

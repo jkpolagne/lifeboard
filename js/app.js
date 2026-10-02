@@ -7,6 +7,9 @@
   const TODOS_KEY = 'lifeboard-todos';
   const CATEGORIES_KEY = 'lifeboard-categories';
   const SORT_KEY = 'lifeboard-todo-sort';
+  const HABITS_KEY = 'lifeboard-habits';
+  const HABIT_LOG_KEY = 'lifeboard-habit-log';
+  const STICKIES_KEY = 'lifeboard-stickies';
 
   const PROMPTS = [
     "What made you smile today?",
@@ -56,7 +59,15 @@
   let entries = [];
   let todos = [];
   let categories = [];
-  let currentFeature = 'journal';
+  let habits = [];
+  let habitLog = {};
+  let stickies = [];
+  let editingHabitId = null;
+  let selectedHabitEmoji = '📖';
+  let selectedHabitFreq = 'daily';
+  let editingStickyId = null;
+  let selectedStickyColor = 'green';
+  let currentFeature = 'today';
   let currentFilter = 'all';
   let currentEntryId = null;
   let editingEntryId = null;
@@ -141,6 +152,13 @@
   const todoEditView = $('#todo-edit-view');
   const fabBtn = $('#fab-new-entry');
 
+  // ── Today DOM refs ──
+  const todayDashboard = $('#today-dashboard');
+  const todaySidebar = $('#today-sidebar');
+  const manageHabitsView = $('#manage-habits-view');
+  const habitFormView = $('#habit-form-view');
+  const stickyFormView = $('#sticky-form-view');
+
   // ── Storage ──
   function loadEntries() {
     try { entries = JSON.parse(localStorage.getItem(JOURNAL_KEY)) || []; } catch { entries = []; }
@@ -151,6 +169,21 @@
     try { todos = JSON.parse(localStorage.getItem(TODOS_KEY)) || []; } catch { todos = []; }
   }
   function saveTodos() { localStorage.setItem(TODOS_KEY, JSON.stringify(todos)); }
+
+  function loadHabits() {
+    try { habits = JSON.parse(localStorage.getItem(HABITS_KEY)) || []; } catch { habits = []; }
+  }
+  function saveHabits() { localStorage.setItem(HABITS_KEY, JSON.stringify(habits)); }
+
+  function loadHabitLog() {
+    try { habitLog = JSON.parse(localStorage.getItem(HABIT_LOG_KEY)) || {}; } catch { habitLog = {}; }
+  }
+  function saveHabitLog() { localStorage.setItem(HABIT_LOG_KEY, JSON.stringify(habitLog)); }
+
+  function loadStickies() {
+    try { stickies = JSON.parse(localStorage.getItem(STICKIES_KEY)) || []; } catch { stickies = []; }
+  }
+  function saveStickies() { localStorage.setItem(STICKIES_KEY, JSON.stringify(stickies)); }
 
   function loadCategories() {
     try {
@@ -256,9 +289,11 @@
     $$('.nav-rail-item[data-feature]').forEach(t => t.classList.toggle('active', t.dataset.feature === feature));
     $$('.bottom-nav-item').forEach(t => t.classList.toggle('active', t.dataset.feature === feature));
 
+    $('#today-header').classList.toggle('hidden', feature !== 'today');
     $('#journal-header').classList.toggle('hidden', feature !== 'journal');
     $('#todo-header').classList.toggle('hidden', feature !== 'todo');
 
+    todaySidebar.classList.toggle('hidden', feature !== 'today');
     journalSidebar.classList.toggle('hidden', feature !== 'journal');
     todoSidebar.classList.toggle('hidden', feature !== 'todo');
 
@@ -267,13 +302,24 @@
     viewEntry.classList.add('hidden');
     writeEntry.classList.add('hidden');
     todoEditView.classList.add('hidden');
+    manageHabitsView.classList.add('hidden');
+    habitFormView.classList.add('hidden');
+    stickyFormView.classList.add('hidden');
 
-    if (feature === 'journal') {
+    if (feature === 'today') {
+      detailEmpty.classList.add('hidden');
+      todoDetailEmpty.classList.add('hidden');
+      todayDashboard.classList.remove('hidden');
+      renderTodayDashboard();
+      renderTodaySidebarHabits();
+    } else if (feature === 'journal') {
+      todayDashboard.classList.add('hidden');
       detailEmpty.classList.remove('hidden');
       todoDetailEmpty.classList.add('hidden');
       currentEntryId = null;
       renderEntries();
     } else {
+      todayDashboard.classList.add('hidden');
       detailEmpty.classList.add('hidden');
       todoDetailEmpty.classList.remove('hidden');
       currentTodoId = null;
@@ -377,6 +423,7 @@
     }
     viewEntry.classList.add('hidden');
     writeEntry.classList.add('hidden');
+    todayDashboard.classList.add('hidden');
     detailEmpty.classList.remove('hidden');
     currentEntryId = null;
     editingEntryId = null;
@@ -397,6 +444,7 @@
     viewText.textContent = entry.text;
     viewPin.textContent = entry.pinned ? '★' : '☆';
     viewPin.classList.toggle('pinned', !!entry.pinned);
+    todayDashboard.classList.add('hidden');
     detailEmpty.classList.add('hidden');
     writeEntry.classList.add('hidden');
     todoEditView.classList.add('hidden');
@@ -427,6 +475,7 @@
       entryText.value = '';
     }
     updateWordCount();
+    todayDashboard.classList.add('hidden');
     detailEmpty.classList.add('hidden');
     viewEntry.classList.add('hidden');
     todoEditView.classList.add('hidden');
@@ -612,6 +661,7 @@
 
   function showTodoHome() {
     if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+    todayDashboard.classList.add('hidden');
     todoEditView.classList.add('hidden');
     viewEntry.classList.add('hidden');
     writeEntry.classList.add('hidden');
@@ -657,6 +707,7 @@
 
     renderCategoryPicker();
 
+    todayDashboard.classList.add('hidden');
     detailEmpty.classList.add('hidden');
     todoDetailEmpty.classList.add('hidden');
     viewEntry.classList.add('hidden');
@@ -710,6 +761,354 @@
   }
 
   // ══════════════════════════════════════
+  //  TODAY DASHBOARD
+  // ══════════════════════════════════════
+
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function dateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function isHabitScheduledOn(habit, date) {
+    const dow = date.getDay();
+    if (habit.freq === 'daily') return true;
+    if (habit.freq === 'weekdays') return dow >= 1 && dow <= 5;
+    if (habit.freq === 'custom') return (habit.days || []).includes(dow);
+    return true;
+  }
+
+  function getHabitStreak(habit) {
+    let streak = 0;
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    const tk = todayKey();
+    const todayScheduled = isHabitScheduledOn(habit, d);
+    const todayDone = (habitLog[tk] || []).includes(habit.id);
+    if (todayScheduled && !todayDone) {
+      d.setDate(d.getDate() - 1);
+    }
+    while (true) {
+      const key = dateKey(d);
+      if (!isHabitScheduledOn(habit, d)) {
+        d.setDate(d.getDate() - 1);
+        continue;
+      }
+      if ((habitLog[key] || []).includes(habit.id)) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+      if (streak > 365) break;
+    }
+    return streak;
+  }
+
+  function getHabitWeekGrid(habit) {
+    const result = [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tk = todayKey();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = dateKey(d);
+      const scheduled = isHabitScheduledOn(habit, d);
+      const done = (habitLog[key] || []).includes(habit.id);
+      if (!scheduled) result.push('not-scheduled');
+      else if (done) result.push('done');
+      else if (i === 0) result.push('today-pending');
+      else result.push('missed');
+    }
+    return result;
+  }
+
+  function getTodaysHabits() {
+    const today = new Date();
+    return habits.filter(h => isHabitScheduledOn(h, today));
+  }
+
+  function toggleHabitDone(habitId) {
+    const tk = todayKey();
+    if (!habitLog[tk]) habitLog[tk] = [];
+    const idx = habitLog[tk].indexOf(habitId);
+    if (idx >= 0) habitLog[tk].splice(idx, 1);
+    else habitLog[tk].push(habitId);
+    saveHabitLog();
+  }
+
+  function renderTodaySidebarHabits() {
+    const todaysHabits = getTodaysHabits();
+    const tk = todayKey();
+    const done = todaysHabits.filter(h => (habitLog[tk] || []).includes(h.id)).length;
+    const total = todaysHabits.length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    $('#today-habit-progress-text').textContent = `${done} of ${total} done`;
+    $('#today-habit-progress-pct').textContent = `${pct}%`;
+    $('#today-habit-progress-fill').style.width = `${pct}%`;
+    $('#streak-today').textContent = `🔥 ${calcStreak()}-day streak`;
+
+    const list = $('#today-habits-list');
+    if (todaysHabits.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>No habits yet. Tap Manage to add one.</p></div>';
+      return;
+    }
+    list.innerHTML = todaysHabits.map(h => {
+      const isDone = (habitLog[tk] || []).includes(h.id);
+      const streak = getHabitStreak(h);
+      const week = getHabitWeekGrid(h);
+      return `
+        <div class="habit-check-card${isDone ? ' done' : ''}" data-hid="${h.id}">
+          <div class="habit-checkbox${isDone ? ' checked' : ''}" data-hid="${h.id}">${isDone ? '✓' : ''}</div>
+          <span class="habit-card-emoji">${h.emoji}</span>
+          <div class="habit-card-body">
+            <div class="habit-card-name">${escapeHtml(h.name)}</div>
+            <div class="habit-card-meta">
+              <span class="habit-streak">🔥 ${streak} days</span>
+              <div class="habit-week-grid">${week.map(s => `<div class="habit-week-dot ${s}"></div>`).join('')}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderTodayDashboard() {
+    const now = new Date();
+    const hour = now.getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    $('#today-greeting').textContent = `${greeting}, Jann`;
+    $('#today-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const streak = calcStreak();
+    $('#today-streak-text').textContent = `${streak}-day journal streak`;
+    const hasJournaledToday = entries.some(e => {
+      const d = new Date(e.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    });
+    $('#today-streak-nudge').textContent = hasJournaledToday ? 'Great job today!' : 'Write today to keep it going!';
+
+    const tk = todayKey();
+    const todaysHabits = getTodaysHabits();
+    const habitsDone = todaysHabits.filter(h => (habitLog[tk] || []).includes(h.id)).length;
+    $('#today-habits-count').textContent = `${habitsDone}/${todaysHabits.length}`;
+
+    renderTodayReminders();
+    renderTodayTasks();
+  }
+
+  function renderTodayReminders() {
+    const container = $('#today-reminders');
+    if (stickies.length === 0) {
+      container.innerHTML = '<p class="today-reminders-empty">No reminders yet. Tap + to add one.</p>';
+      return;
+    }
+    container.innerHTML = stickies.map(s => `
+      <div class="sticky-card color-${s.color}" data-sid="${s.id}">
+        <div class="sticky-card-text">${escapeHtml(s.text)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderTodayTasks() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const activeTodos = todos.filter(t => !t.completed);
+
+    let overdue = 0, dueToday = 0, dueTomorrow = 0;
+    const pendingTasks = [];
+
+    activeTodos.forEach(t => {
+      if (!t.due) return;
+      const due = new Date(t.due + 'T00:00:00');
+      const diff = Math.floor((due - today) / 86400000);
+      if (diff < 0) { overdue++; pendingTasks.push({ ...t, dueLabel: 'Overdue', dueCls: 'overdue' }); }
+      else if (diff === 0) { dueToday++; pendingTasks.push({ ...t, dueLabel: 'Today', dueCls: 'today' }); }
+      else if (diff === 1) { dueTomorrow++; pendingTasks.push({ ...t, dueLabel: 'Tomorrow', dueCls: 'tomorrow' }); }
+    });
+
+    $('#today-task-stats').innerHTML = `
+      <div class="today-stat-card overdue"><span class="today-stat-number">${overdue}</span><span class="today-stat-label">Overdue</span></div>
+      <div class="today-stat-card due-today"><span class="today-stat-number">${dueToday}</span><span class="today-stat-label">Due Today</span></div>
+      <div class="today-stat-card tomorrow"><span class="today-stat-number">${dueTomorrow}</span><span class="today-stat-label">Tomorrow</span></div>
+    `;
+
+    const tasksContainer = $('#today-pending-tasks');
+    if (pendingTasks.length === 0) {
+      tasksContainer.innerHTML = '<div class="today-tasks-clear">All clear! No tasks due today.</div>';
+      return;
+    }
+    tasksContainer.innerHTML = pendingTasks.map(t => {
+      const cat = getCat(t.category);
+      return `<div class="today-task-row" data-tid="${t.id}">
+        <span class="today-task-dot" style="background:${cat.color}"></span>
+        <span class="today-task-name">${escapeHtml(t.name)}</span>
+        <span class="today-task-due ${t.dueCls}">${t.dueLabel}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function showTodayHome() {
+    if (isMobile()) { sidebar.classList.add('active'); detailPanel.classList.remove('active'); }
+    manageHabitsView.classList.add('hidden');
+    habitFormView.classList.add('hidden');
+    stickyFormView.classList.add('hidden');
+    todayDashboard.classList.remove('hidden');
+    renderTodayDashboard();
+    renderTodaySidebarHabits();
+  }
+
+  function showManageHabits() {
+    todayDashboard.classList.add('hidden');
+    habitFormView.classList.add('hidden');
+    stickyFormView.classList.add('hidden');
+    manageHabitsView.classList.remove('hidden');
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    renderManageHabits();
+  }
+
+  function renderManageHabits() {
+    const list = $('#manage-habits-list');
+    if (habits.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>No habits yet. Add your first one!</p></div>';
+      return;
+    }
+    const freqLabels = { daily: 'Every day', weekdays: 'Weekdays', custom: '' };
+    list.innerHTML = habits.map((h, i) => {
+      let freqText = freqLabels[h.freq] || '';
+      if (h.freq === 'custom' && h.days) {
+        const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        freqText = h.days.map(d => dayNames[d]).join(' · ');
+      }
+      const streak = getHabitStreak(h);
+      return `
+        <div class="manage-habit-card" data-hid="${h.id}">
+          <div class="manage-habit-reorder">
+            <button data-dir="up" data-idx="${i}" ${i === 0 ? 'disabled' : ''}>▲</button>
+            <button data-dir="down" data-idx="${i}" ${i === habits.length - 1 ? 'disabled' : ''}>▼</button>
+          </div>
+          <span class="manage-habit-emoji">${h.emoji}</span>
+          <div class="manage-habit-info">
+            <div class="manage-habit-name">${escapeHtml(h.name)}</div>
+            <div><span class="manage-habit-freq">${freqText}</span><span class="manage-habit-streak">🔥 ${streak} days</span></div>
+          </div>
+          <div class="manage-habit-actions">
+            <button class="habit-edit-btn" data-hid="${h.id}">✏️</button>
+            <button class="habit-delete-btn" data-hid="${h.id}">🗑️</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function showHabitForm(editId) {
+    editingHabitId = editId || null;
+    const nameInput = $('#habit-name');
+    const nameError = $('#habit-name-error');
+    const heading = $('#habit-form-heading');
+    const customEmoji = $('#habit-custom-emoji');
+    nameError.classList.add('hidden');
+
+    if (editingHabitId) {
+      const h = habits.find(x => x.id === editingHabitId);
+      if (!h) return;
+      heading.textContent = 'Edit Habit';
+      nameInput.value = h.name;
+      selectedHabitEmoji = h.emoji;
+      selectedHabitFreq = h.freq;
+      if (h.freq === 'custom' && h.days) {
+        $$('#habit-custom-days input').forEach(cb => { cb.checked = h.days.includes(parseInt(cb.value)); });
+      }
+    } else {
+      heading.textContent = 'New Habit';
+      nameInput.value = '';
+      selectedHabitEmoji = '📖';
+      selectedHabitFreq = 'daily';
+      customEmoji.value = '';
+    }
+
+    $$('#habit-emoji-picker .habit-emoji-btn').forEach(b => b.classList.toggle('selected', b.dataset.emoji === selectedHabitEmoji));
+    $$('#habit-freq-picker .priority-btn').forEach(b => b.classList.toggle('selected', b.dataset.freq === selectedHabitFreq));
+    $('#habit-custom-days').classList.toggle('hidden', selectedHabitFreq !== 'custom');
+
+    todayDashboard.classList.add('hidden');
+    manageHabitsView.classList.add('hidden');
+    stickyFormView.classList.add('hidden');
+    habitFormView.classList.remove('hidden');
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    nameInput.focus();
+  }
+
+  function saveHabit() {
+    const name = $('#habit-name').value.trim();
+    if (!name) { $('#habit-name-error').classList.remove('hidden'); return; }
+    const customEmoji = $('#habit-custom-emoji').value.trim();
+    const emoji = customEmoji || selectedHabitEmoji;
+    let days = [];
+    if (selectedHabitFreq === 'custom') {
+      $$('#habit-custom-days input:checked').forEach(cb => days.push(parseInt(cb.value)));
+    }
+
+    if (editingHabitId) {
+      const h = habits.find(x => x.id === editingHabitId);
+      if (h) { h.name = name; h.emoji = emoji; h.freq = selectedHabitFreq; h.days = days; }
+    } else {
+      habits.push({ id: uid(), name, emoji, freq: selectedHabitFreq, days });
+    }
+    saveHabits();
+    showManageHabits();
+  }
+
+  function showStickyForm(editId) {
+    editingStickyId = editId || null;
+    const textInput = $('#sticky-text');
+    const textError = $('#sticky-text-error');
+    const heading = $('#sticky-form-heading');
+    textError.classList.add('hidden');
+
+    if (editingStickyId) {
+      const s = stickies.find(x => x.id === editingStickyId);
+      if (!s) return;
+      heading.textContent = 'Edit Reminder';
+      textInput.value = s.text;
+      selectedStickyColor = s.color;
+    } else {
+      heading.textContent = 'New Reminder';
+      textInput.value = '';
+      selectedStickyColor = 'green';
+    }
+
+    $$('.sticky-color-btn').forEach(b => b.classList.toggle('selected', b.dataset.color === selectedStickyColor));
+    $('#btn-sticky-delete-top').classList.toggle('hidden', !editingStickyId);
+
+    todayDashboard.classList.add('hidden');
+    manageHabitsView.classList.add('hidden');
+    habitFormView.classList.add('hidden');
+    stickyFormView.classList.remove('hidden');
+    if (isMobile()) { sidebar.classList.remove('active'); detailPanel.classList.add('active'); }
+    textInput.focus();
+  }
+
+  function saveSticky() {
+    const text = $('#sticky-text').value.trim();
+    if (!text) { $('#sticky-text-error').classList.remove('hidden'); return; }
+
+    if (editingStickyId) {
+      const s = stickies.find(x => x.id === editingStickyId);
+      if (s) { s.text = text; s.color = selectedStickyColor; }
+    } else {
+      stickies.push({ id: uid(), text, color: selectedStickyColor });
+    }
+    saveStickies();
+    showTodayHome();
+  }
+
+  // ══════════════════════════════════════
   //  EVENT HANDLERS
   // ══════════════════════════════════════
 
@@ -730,6 +1129,118 @@
 
   // FAB — mobile new entry
   fabBtn.addEventListener('click', () => showWrite());
+
+  // ── Today Dashboard Events ──
+
+  // Sidebar habits: checkbox toggle
+  $('#today-habits-list').addEventListener('click', e => {
+    const checkbox = e.target.closest('.habit-checkbox');
+    if (checkbox) {
+      e.stopPropagation();
+      toggleHabitDone(checkbox.dataset.hid);
+      renderTodaySidebarHabits();
+      renderTodayDashboard();
+      return;
+    }
+  });
+
+  // Manage link
+  $('#btn-manage-habits').addEventListener('click', showManageHabits);
+
+  // Manage habits list: reorder, edit, delete
+  $('#manage-habits-list').addEventListener('click', e => {
+    const reorderBtn = e.target.closest('[data-dir]');
+    if (reorderBtn) {
+      const idx = parseInt(reorderBtn.dataset.idx);
+      const dir = reorderBtn.dataset.dir;
+      if (dir === 'up' && idx > 0) { [habits[idx], habits[idx-1]] = [habits[idx-1], habits[idx]]; }
+      else if (dir === 'down' && idx < habits.length - 1) { [habits[idx], habits[idx+1]] = [habits[idx+1], habits[idx]]; }
+      saveHabits();
+      renderManageHabits();
+      return;
+    }
+    const editBtn = e.target.closest('.habit-edit-btn');
+    if (editBtn) { showHabitForm(editBtn.dataset.hid); return; }
+    const delBtn = e.target.closest('.habit-delete-btn');
+    if (delBtn) {
+      deleteMode = 'habit';
+      editingHabitId = delBtn.dataset.hid;
+      modalText.textContent = 'Delete this habit?';
+      modalConfirm.textContent = 'Delete';
+      deleteModal.classList.remove('hidden');
+      return;
+    }
+  });
+
+  // Add new habit button
+  $('#btn-add-habit').addEventListener('click', () => showHabitForm());
+
+  // Habit form: emoji picker
+  $('#habit-emoji-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.habit-emoji-btn');
+    if (!btn) return;
+    $$('#habit-emoji-picker .habit-emoji-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedHabitEmoji = btn.dataset.emoji;
+    $('#habit-custom-emoji').value = '';
+  });
+
+  // Habit form: freq picker
+  $('#habit-freq-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.priority-btn');
+    if (!btn) return;
+    $$('#habit-freq-picker .priority-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedHabitFreq = btn.dataset.freq;
+    $('#habit-custom-days').classList.toggle('hidden', selectedHabitFreq !== 'custom');
+  });
+
+  // Habit form: save
+  $('#btn-habit-save-top').addEventListener('click', saveHabit);
+  $('#btn-habit-save-bottom').addEventListener('click', saveHabit);
+  $('#btn-habit-cancel').addEventListener('click', showManageHabits);
+
+  // Add sticky reminder
+  $('#btn-add-sticky').addEventListener('click', () => showStickyForm());
+
+  // Sticky click to edit
+  $('#today-reminders').addEventListener('click', e => {
+    const card = e.target.closest('.sticky-card');
+    if (card) showStickyForm(card.dataset.sid);
+  });
+
+  // Sticky form: color picker
+  document.querySelector('.sticky-color-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.sticky-color-btn');
+    if (!btn) return;
+    $$('.sticky-color-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedStickyColor = btn.dataset.color;
+  });
+
+  // Sticky form: save
+  $('#btn-sticky-save-top').addEventListener('click', saveSticky);
+  $('#btn-sticky-save-bottom').addEventListener('click', saveSticky);
+  $('#btn-sticky-cancel').addEventListener('click', showTodayHome);
+
+  // Sticky form: delete
+  $('#btn-sticky-delete-top').addEventListener('click', () => {
+    if (!editingStickyId) return;
+    deleteMode = 'sticky';
+    modalText.textContent = 'Delete this reminder?';
+    modalConfirm.textContent = 'Delete';
+    deleteModal.classList.remove('hidden');
+  });
+
+  // Pending tasks: click to go to todo
+  $('#today-pending-tasks').addEventListener('click', e => {
+    const row = e.target.closest('.today-task-row');
+    if (row) {
+      switchFeature('todo');
+      currentTodoId = row.dataset.tid;
+      showTodoForm(currentTodoId);
+    }
+  });
 
   // Theme
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
@@ -836,6 +1347,18 @@
       saveTodos(); deleteModal.classList.add('hidden'); deleteMode = 'single';
       renderTodos();
       showToast('Completed tasks cleared');
+    } else if (deleteMode === 'habit') {
+      habits = habits.filter(h => h.id !== editingHabitId);
+      saveHabits(); deleteModal.classList.add('hidden'); deleteMode = 'single';
+      editingHabitId = null;
+      showManageHabits();
+      showToast('Habit deleted');
+    } else if (deleteMode === 'sticky') {
+      stickies = stickies.filter(s => s.id !== editingStickyId);
+      saveStickies(); deleteModal.classList.add('hidden'); deleteMode = 'single';
+      editingStickyId = null;
+      showTodayHome();
+      showToast('Reminder deleted');
     }
   });
 
@@ -850,7 +1373,10 @@
   // Back buttons
   $$('.back-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (btn.dataset.target === 'todo-home') showTodoHome();
+      const t = btn.dataset.target;
+      if (t === 'todo-home') showTodoHome();
+      else if (t === 'today-home') showTodayHome();
+      else if (t === 'manage-habits') showManageHabits();
       else showJournalHome();
     });
   });
@@ -981,7 +1507,7 @@
   document.querySelector('.priority-picker').addEventListener('click', e => {
     const btn = e.target.closest('.priority-btn');
     if (!btn) return;
-    $$('.priority-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.priority-picker .priority-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     selectedPriority = btn.dataset.priority;
   });
@@ -1051,8 +1577,9 @@
   loadCategories();
   loadTodos();
   loadSort();
+  loadHabits();
+  loadHabitLog();
+  loadStickies();
   renderStreak();
-  renderEntries();
-  renderTodoCategoryFilters();
-  renderTodos();
+  switchFeature('today');
 })();

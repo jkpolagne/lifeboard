@@ -415,6 +415,324 @@ input, textarea, select { font-family: inherit; border: none; outline: none; }
 .btn-clear-link:hover { color: var(--accent-hover); }
 
 /* ══════════════════════════════════════
+   TODAY DASHBOARD
+   ══════════════════════════════════════ */
+
+/* Sidebar habits */
+.today-habits-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px 2px; flex-shrink: 0;
+}
+
+.today-section-title {
+  font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: var(--text);
+}
+
+.today-manage-link {
+  font-size: 0.85rem; font-weight: 600; color: var(--accent);
+  transition: color 0.15s ease;
+}
+
+.today-manage-link:hover { color: var(--accent-hover); }
+
+.today-habit-progress { padding: 4px 16px 6px; flex-shrink: 0; }
+
+.today-habits-list { padding: 0 12px 12px; }
+
+.habit-check-card {
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 10px 14px; margin-bottom: 6px;
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: border-color 0.15s ease;
+}
+
+.habit-check-card:hover { border-color: var(--accent); }
+
+.habit-checkbox {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--accent); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: transparent;
+  transition: all 0.15s ease; cursor: pointer;
+}
+
+.habit-checkbox.checked {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
+.habit-card-emoji { font-size: 1.2rem; line-height: 1; flex-shrink: 0; }
+
+.habit-card-body { flex: 1; min-width: 0; }
+
+.habit-card-name {
+  font-size: 0.92rem; font-weight: 500; color: var(--text);
+}
+
+.habit-check-card.done .habit-card-name {
+  text-decoration: line-through; opacity: 0.55;
+}
+
+.habit-card-meta {
+  display: flex; align-items: center; gap: 8px; margin-top: 2px;
+}
+
+.habit-streak {
+  font-size: 0.72rem; font-weight: 600; color: var(--highlight);
+}
+
+.habit-week-grid {
+  display: flex; gap: 2px;
+}
+
+.habit-week-dot {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: var(--border);
+}
+
+.habit-week-dot.done { background: var(--accent); }
+.habit-week-dot.today-pending { border: 1.5px solid var(--accent); background: transparent; }
+.habit-week-dot.not-scheduled { background: transparent; }
+
+/* Dashboard detail panel */
+.today-dashboard { max-width: 860px; }
+
+.today-date {
+  font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 4px;
+}
+
+.today-greeting {
+  font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700;
+  color: var(--text); margin-bottom: 20px; line-height: 1.2;
+}
+
+.today-stats-row {
+  display: flex; gap: 16px; margin-bottom: 28px;
+}
+
+.today-streak-card {
+  flex: 1; display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 16px 18px; border: 1.5px solid var(--border);
+}
+
+.today-streak-icon { font-size: 1.6rem; }
+
+.today-streak-info { display: flex; flex-direction: column; }
+
+.today-streak-label {
+  font-size: 0.92rem; font-weight: 600; color: var(--accent);
+}
+
+.today-streak-nudge {
+  font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;
+}
+
+.today-habits-summary {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 16px 24px; border: 1.5px solid var(--border);
+  min-width: 90px;
+}
+
+.today-habits-count {
+  font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--text);
+}
+
+.today-habits-done-label {
+  font-size: 0.78rem; color: var(--text-secondary); font-weight: 500;
+}
+
+.today-section { margin-bottom: 24px; }
+
+.today-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.today-add-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.today-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Reminders */
+.today-reminders {
+  display: flex; flex-wrap: wrap; gap: 12px;
+}
+
+.sticky-card {
+  flex: 1; min-width: 180px;
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 14px 16px; border: 1.5px solid var(--border);
+  cursor: pointer; transition: border-color 0.15s ease;
+}
+
+.sticky-card:hover { border-color: var(--accent); }
+
+.sticky-card.color-green { border-left: 4px solid #5B8C6A; }
+.sticky-card.color-amber { border-left: 4px solid #D4943A; }
+.sticky-card.color-red { border-left: 4px solid #C45B4A; }
+
+.sticky-card-text { font-size: 0.9rem; color: var(--text); line-height: 1.4; }
+
+.today-reminders-empty {
+  font-size: 0.88rem; color: var(--text-secondary);
+}
+
+/* Task stats */
+.today-task-stats {
+  display: flex; gap: 12px; margin-bottom: 14px;
+}
+
+.today-stat-card {
+  flex: 1; text-align: center;
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 14px 8px; border: 1.5px solid var(--border);
+}
+
+.today-stat-card.overdue { background: rgba(196,91,74,0.06); border-color: rgba(196,91,74,0.2); }
+.today-stat-card.due-today { background: rgba(91,140,106,0.06); border-color: rgba(91,140,106,0.2); }
+.today-stat-card.tomorrow { background: var(--surface); }
+
+.today-stat-number {
+  display: block; font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; line-height: 1;
+}
+
+.today-stat-card.overdue .today-stat-number { color: var(--danger); }
+.today-stat-card.due-today .today-stat-number { color: var(--accent); }
+.today-stat-card.tomorrow .today-stat-number { color: var(--text-secondary); }
+
+.today-stat-label {
+  display: block; font-size: 0.76rem; font-weight: 600;
+  margin-top: 4px; text-transform: capitalize;
+}
+
+.today-stat-card.overdue .today-stat-label { color: var(--danger); }
+.today-stat-card.due-today .today-stat-label { color: var(--accent); }
+.today-stat-card.tomorrow .today-stat-label { color: var(--text-secondary); }
+
+.today-pending-tasks .today-task-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--surface); border-radius: var(--radius-card);
+  border: 1.5px solid var(--border); margin-bottom: 6px;
+  cursor: pointer; transition: border-color 0.15s ease;
+}
+
+.today-task-row:hover { border-color: var(--accent); }
+
+.today-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.today-task-name { flex: 1; font-size: 0.9rem; font-weight: 500; color: var(--text); }
+.today-task-due { font-size: 0.78rem; font-weight: 600; flex-shrink: 0; }
+.today-task-due.overdue { color: var(--danger); }
+.today-task-due.today { color: var(--accent); }
+.today-task-due.tomorrow { color: var(--text-secondary); }
+
+.today-tasks-clear {
+  text-align: center; padding: 20px; font-size: 0.92rem; color: var(--text-secondary);
+}
+
+/* Manage habits */
+.manage-habit-card {
+  background: var(--surface); border-radius: var(--radius-card);
+  padding: 14px 16px; margin-bottom: 8px;
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.manage-habit-reorder { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+
+.manage-habit-reorder button {
+  font-size: 0.7rem; color: var(--text-secondary);
+  padding: 2px 4px; border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.manage-habit-reorder button:hover { color: var(--text); }
+
+.manage-habit-emoji { font-size: 1.3rem; line-height: 1; flex-shrink: 0; }
+
+.manage-habit-info { flex: 1; min-width: 0; }
+
+.manage-habit-name { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+
+.manage-habit-freq { font-size: 0.78rem; color: var(--text-secondary); }
+
+.manage-habit-streak { font-size: 0.78rem; font-weight: 600; color: var(--highlight); margin-left: 6px; }
+
+.manage-habit-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.manage-habit-actions button {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.manage-habit-actions button:hover { background: var(--border); color: var(--text); }
+.manage-habit-actions .habit-delete-btn:hover { color: var(--danger); }
+
+/* Habit form */
+.habit-emoji-picker {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+}
+
+.habit-emoji-btn {
+  width: 44px; height: 44px; border-radius: var(--radius-btn);
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-size: 1.3rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.habit-emoji-btn:hover { border-color: var(--accent); }
+
+.habit-emoji-btn.selected {
+  border-color: var(--accent); background: rgba(91,140,106,0.08);
+  box-shadow: 0 0 0 2px rgba(91,140,106,0.15);
+}
+
+.habit-freq-picker { display: flex; gap: 8px; margin-bottom: 16px; }
+.habit-freq-picker .priority-btn { flex: 1; }
+
+.habit-custom-days {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  padding: 12px; background: var(--surface); border-radius: var(--radius-card);
+  border: 1.5px solid var(--border);
+}
+
+.habit-day-check {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.85rem; font-weight: 500; color: var(--text);
+  cursor: pointer;
+}
+
+.habit-day-check input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+/* Sticky form */
+.sticky-color-picker {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+
+.sticky-color-btn {
+  flex: 1; padding: 10px 12px; border-radius: var(--radius-btn);
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);
+  transition: all 0.15s ease; cursor: pointer;
+}
+
+.sticky-color-btn:hover { border-color: var(--accent); }
+
+.sticky-color-btn.selected {
+  border-color: var(--accent); background: rgba(91,140,106,0.08);
+  color: var(--text); font-weight: 600;
+}
+
+/* ══════════════════════════════════════
    DETAIL PANEL
    ══════════════════════════════════════ */
 #detail-panel { display: none; }
@@ -731,7 +1049,8 @@ input, textarea, select { font-family: inherit; border: none; outline: none; }
     background: var(--bg); height: 100vh; position: relative;
   }
 
-  /* Todo header hidden on desktop */
+  /* Today + Todo headers hidden on desktop */
+  #today-header { display: none !important; }
   #todo-header { display: none !important; }
 
   /* Detail panel */
